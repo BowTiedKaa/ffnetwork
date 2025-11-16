@@ -72,7 +72,7 @@ const FollowUps = () => {
       .order("due_date", { ascending: true });
 
     if (data) setFollowUps(data);
-    if (error) console.error("Error fetching follow-ups:", error);
+    // Error silently handled - user will see empty state
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

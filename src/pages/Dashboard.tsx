@@ -54,7 +54,7 @@ const Dashboard = () => {
       if (tasksResult.data) setTasks(tasksResult.data);
       if (streakResult.data) setStreak(streakResult.data);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      // Error silently handled - user will see empty state
     } finally {
       setLoading(false);
     }
