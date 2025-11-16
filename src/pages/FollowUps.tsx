@@ -11,6 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Calendar, CheckCircle2 } from "lucide-react";
+import { z } from "zod";
+
+const followUpSchema = z.object({
+  contact_id: z.string().uuid("Please select a valid contact"),
+  due_date: z.string().min(1, "Due date is required"),
+  note: z.string().trim().max(1000, "Note must be less than 1000 characters").optional(),
+});
 
 interface FollowUp {
   id: string;
@@ -80,28 +87,42 @@ const FollowUps = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("follow_ups").insert({
-      user_id: user.id,
-      ...formData,
-    });
+    try {
+      const validatedData = followUpSchema.parse(formData);
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add follow-up",
-        variant: "destructive",
+      const { error } = await supabase.from("follow_ups").insert({
+        user_id: user.id,
+        contact_id: validatedData.contact_id,
+        due_date: validatedData.due_date,
+        note: validatedData.note || null,
       });
-      return;
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add follow-up",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Follow-up added!",
+        description: "Successfully scheduled follow-up",
+      });
+
+      setIsOpen(false);
+      setFormData({ contact_id: "", due_date: "", note: "" });
+      fetchFollowUps();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
     }
-
-    toast({
-      title: "Follow-up added!",
-      description: "Successfully scheduled follow-up",
-    });
-
-    setIsOpen(false);
-    setFormData({ contact_id: "", due_date: "", note: "" });
-    fetchFollowUps();
   };
 
   const handleComplete = async (id: string, completed: boolean) => {

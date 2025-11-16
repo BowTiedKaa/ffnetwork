@@ -9,6 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Building2, Target } from "lucide-react";
+import { z } from "zod";
+
+const companySchema = z.object({
+  name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
+  industry: z.string().trim().max(100, "Industry must be less than 100 characters").optional(),
+  target_role: z.string().trim().max(100, "Target role must be less than 100 characters").optional(),
+  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
+  priority: z.number().min(0, "Priority must be at least 0").max(5, "Priority must be at most 5"),
+});
 
 interface Company {
   id: string;
@@ -54,28 +63,44 @@ const Companies = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("companies").insert({
-      user_id: user.id,
-      ...formData,
-    });
+    try {
+      const validatedData = companySchema.parse(formData);
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add company",
-        variant: "destructive",
+      const { error } = await supabase.from("companies").insert({
+        user_id: user.id,
+        name: validatedData.name,
+        industry: validatedData.industry || null,
+        target_role: validatedData.target_role || null,
+        notes: validatedData.notes || null,
+        priority: validatedData.priority,
       });
-      return;
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add company",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Company added!",
+        description: "Successfully added to your target list",
+      });
+
+      setIsOpen(false);
+      setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0 });
+      fetchCompanies();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
     }
-
-    toast({
-      title: "Company added!",
-      description: "Successfully added to your target list",
-    });
-
-    setIsOpen(false);
-    setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0 });
-    fetchCompanies();
   };
 
   const getPriorityBadge = (priority: number) => {
