@@ -10,6 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Mail, Briefcase, Thermometer } from "lucide-react";
+import { z } from "zod";
+
+const contactSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().max(255, "Email must be less than 255 characters").email("Invalid email address").optional().or(z.literal("")),
+  company: z.string().trim().max(100, "Company name must be less than 100 characters").optional(),
+  role: z.string().trim().max(100, "Role must be less than 100 characters").optional(),
+  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
+  warmth_level: z.enum(["cold", "warm", "hot"]),
+});
 
 interface Contact {
   id: string;
@@ -58,28 +68,45 @@ const Contacts = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("contacts").insert({
-      user_id: user.id,
-      ...formData,
-    });
+    try {
+      const validatedData = contactSchema.parse(formData);
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add contact",
-        variant: "destructive",
+      const { error } = await supabase.from("contacts").insert({
+        user_id: user.id,
+        name: validatedData.name,
+        email: validatedData.email || null,
+        company: validatedData.company || null,
+        role: validatedData.role || null,
+        warmth_level: validatedData.warmth_level,
+        notes: validatedData.notes || null,
       });
-      return;
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add contact",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Contact added!",
+        description: "Successfully added to your network",
+      });
+
+      setIsOpen(false);
+      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "" });
+      fetchContacts();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
     }
-
-    toast({
-      title: "Contact added!",
-      description: "Successfully added to your network",
-    });
-
-    setIsOpen(false);
-    setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "" });
-    fetchContacts();
   };
 
   const getWarmthColor = (level: string) => {
