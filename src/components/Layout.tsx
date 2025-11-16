@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { User, Session } from "@supabase/supabase-js";
 import { Home, Users, Building2, Calendar, LogOut } from "lucide-react";
+import logo from "@/assets/former-fed-logo.jpg";
 
 interface LayoutProps {
   children: ReactNode;
@@ -61,7 +62,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-8">
-              <h1 className="text-xl font-bold text-primary">NetworkPro</h1>
+              <img src={logo} alt="Former Fed" className="h-10" />
               <div className="hidden md:flex gap-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
