@@ -46,7 +46,7 @@ const Companies = () => {
       .order("priority", { ascending: false });
 
     if (data) setCompanies(data);
-    if (error) console.error("Error fetching companies:", error);
+    // Error silently handled - user will see empty state
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

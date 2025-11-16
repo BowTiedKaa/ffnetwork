@@ -50,7 +50,7 @@ const Contacts = () => {
       .order("created_at", { ascending: false });
 
     if (data) setContacts(data);
-    if (error) console.error("Error fetching contacts:", error);
+    // Error silently handled - user will see empty state
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
