@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Flame, Target, TrendingUp } from "lucide-react";
+import { Flame, Target, TrendingUp, Users, TrendingUp as TrailblazerIcon, Calendar, Building2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface DailyTask {
   id: string;
@@ -22,9 +23,26 @@ interface Streak {
   total_tasks_completed: number;
 }
 
+interface Contact {
+  id: string;
+  name: string;
+  company: string | null;
+  contact_type: string;
+  last_contact_date: string | null;
+}
+
+interface TodayAction {
+  type: "follow_up" | "cold_contact" | "company_overlap";
+  contact: Contact;
+  followUpId?: string;
+  daysAgo?: number;
+  targetCompany?: string;
+}
+
 const Dashboard = () => {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [streak, setStreak] = useState<Streak | null>(null);
+  const [todayActions, setTodayActions] = useState<TodayAction[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -37,22 +55,103 @@ const Dashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [tasksResult, streakResult] = await Promise.all([
+      const today = new Date().toISOString().split("T")[0];
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
+
+      const [tasksResult, streakResult, followUpsResult, contactsResult, companiesResult] = await Promise.all([
         supabase
           .from("daily_tasks")
           .select("*")
           .eq("user_id", user.id)
-          .eq("due_date", new Date().toISOString().split("T")[0])
+          .eq("due_date", today)
           .order("created_at", { ascending: true }),
         supabase
           .from("streaks")
           .select("*")
           .eq("user_id", user.id)
           .single(),
+        supabase
+          .from("follow_ups")
+          .select("*, contacts(*)")
+          .eq("user_id", user.id)
+          .eq("due_date", today)
+          .eq("completed", false),
+        supabase
+          .from("contacts")
+          .select("*")
+          .eq("user_id", user.id),
+        supabase
+          .from("companies")
+          .select("name")
+          .eq("user_id", user.id),
       ]);
 
       if (tasksResult.data) setTasks(tasksResult.data);
       if (streakResult.data) setStreak(streakResult.data);
+
+      // Generate today's actions
+      const actions: TodayAction[] = [];
+      
+      // 1. Follow-ups due today
+      if (followUpsResult.data) {
+        followUpsResult.data.forEach((followUp: any) => {
+          if (followUp.contacts && actions.length < 3) {
+            actions.push({
+              type: "follow_up",
+              contact: followUp.contacts,
+              followUpId: followUp.id,
+            });
+          }
+        });
+      }
+
+      // 2. Contacts going cold (>30 days)
+      if (contactsResult.data && actions.length < 3) {
+        const coldContacts = contactsResult.data.filter(
+          (contact: Contact) =>
+            !contact.last_contact_date ||
+            contact.last_contact_date < thirtyDaysAgoStr
+        );
+        
+        coldContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+          const daysAgo = contact.last_contact_date
+            ? Math.floor(
+                (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : null;
+          
+          actions.push({
+            type: "cold_contact",
+            contact,
+            daysAgo: daysAgo || undefined,
+          });
+        });
+      }
+
+      // 3. Contacts with target-company overlap
+      if (companiesResult.data && contactsResult.data && actions.length < 3) {
+        const targetCompanies = companiesResult.data.map((c: any) => c.name.toLowerCase());
+        const overlappingContacts = contactsResult.data.filter(
+          (contact: Contact) =>
+            contact.company &&
+            targetCompanies.includes(contact.company.toLowerCase()) &&
+            (!contact.last_contact_date ||
+              contact.last_contact_date < thirtyDaysAgoStr)
+        );
+
+        overlappingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+          actions.push({
+            type: "company_overlap",
+            contact,
+            targetCompany: contact.company || undefined,
+          });
+        });
+      }
+
+      setTodayActions(actions);
     } catch (error) {
       // Error silently handled - user will see empty state
     } finally {
@@ -136,6 +235,21 @@ const Dashboard = () => {
     }
   };
 
+  const getActionMessage = (action: TodayAction) => {
+    switch (action.type) {
+      case "follow_up":
+        return "Follow up today";
+      case "cold_contact":
+        return action.daysAgo
+          ? `Reconnect (last interaction ${action.daysAgo} days ago)`
+          : "Reach out (no interaction logged)";
+      case "company_overlap":
+        return `Reach out about ${action.targetCompany}`;
+      default:
+        return "";
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -146,6 +260,81 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
         <p className="text-muted-foreground">Your daily networking goals</p>
       </div>
+
+      {/* Today's Actions Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Today's Actions</CardTitle>
+          <CardDescription>
+            Personalized steps to keep your network warm
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {todayActions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>You're in good shape today. Add a new contact or check your target companies.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {todayActions.map((action, index) => (
+                <div
+                  key={`${action.contact.id}-${index}`}
+                  className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent/5 transition-colors"
+                >
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{action.contact.name}</span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          action.contact.contact_type === "connector"
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-accent/10 text-accent border-accent/20"
+                        }
+                      >
+                        {action.contact.contact_type === "connector" ? (
+                          <>
+                            <Users className="h-3 w-3 mr-1" />
+                            Connector
+                          </>
+                        ) : (
+                          <>
+                            <TrailblazerIcon className="h-3 w-3 mr-1" />
+                            Trailblazer
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {getActionMessage(action)}
+                    </p>
+                    {action.contact.company && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Building2 className="h-3 w-3" />
+                        {action.contact.company}
+                      </div>
+                    )}
+                    {action.contact.last_contact_date && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Last interaction: {formatDistanceToNow(new Date(action.contact.last_contact_date), { addSuffix: true })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline">
+                      Log Interaction
+                    </Button>
+                    <Button size="sm">
+                      Send Message
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
