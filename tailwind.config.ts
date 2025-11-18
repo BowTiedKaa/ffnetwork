@@ -58,9 +58,9 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         warmth: {
-          cold: "hsl(var(--warmth-cold))",
           warm: "hsl(var(--warmth-warm))",
-          hot: "hsl(var(--warmth-hot))",
+          cooling: "hsl(var(--warmth-cooling))",
+          cold: "hsl(var(--warmth-cold))",
         },
       },
       borderRadius: {

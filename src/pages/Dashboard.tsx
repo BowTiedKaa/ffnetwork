@@ -29,6 +29,7 @@ interface Contact {
   company: string | null;
   contact_type: string;
   last_contact_date: string | null;
+  warmth_level: string;
 }
 
 interface TodayAction {
@@ -60,6 +61,45 @@ const Dashboard = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
 
+      // First, fetch all contacts and update their warmth status
+      const { data: allContacts } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", user.id);
+
+      // Calculate and update warmth status for each contact
+      if (allContacts) {
+        const now = new Date();
+        const updates = allContacts.map(contact => {
+          if (!contact.last_contact_date) return null;
+          
+          const lastContactDate = new Date(contact.last_contact_date);
+          const daysSinceContact = Math.floor((now.getTime() - lastContactDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          let newWarmthStatus: string;
+          if (daysSinceContact <= 30) {
+            newWarmthStatus = "warm";
+          } else if (daysSinceContact <= 60) {
+            newWarmthStatus = "cooling";
+          } else {
+            newWarmthStatus = "cold";
+          }
+          
+          // Only update if warmth status changed
+          if (contact.warmth_level !== newWarmthStatus) {
+            return supabase
+              .from("contacts")
+              .update({ warmth_level: newWarmthStatus })
+              .eq("id", contact.id);
+          }
+          return null;
+        }).filter(Boolean);
+
+        // Execute all updates
+        await Promise.all(updates);
+      }
+
+      // Now fetch all data including updated contacts
       const [tasksResult, streakResult, followUpsResult, contactsResult, companiesResult] = await Promise.all([
         supabase
           .from("daily_tasks")
@@ -107,15 +147,13 @@ const Dashboard = () => {
         });
       }
 
-      // 2. Contacts going cold (>30 days)
+      // 2. Prioritize cooling contacts (31-60 days)
       if (contactsResult.data && actions.length < 3) {
-        const coldContacts = contactsResult.data.filter(
-          (contact: Contact) =>
-            !contact.last_contact_date ||
-            contact.last_contact_date < thirtyDaysAgoStr
+        const coolingContacts = contactsResult.data.filter(
+          (contact: Contact) => contact.warmth_level === "cooling"
         );
         
-        coldContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+        coolingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
           const daysAgo = contact.last_contact_date
             ? Math.floor(
                 (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
@@ -131,15 +169,14 @@ const Dashboard = () => {
         });
       }
 
-      // 3. Contacts with target-company overlap
+      // 3. Cold contacts tied to target companies
       if (companiesResult.data && contactsResult.data && actions.length < 3) {
         const targetCompanies = companiesResult.data.map((c: any) => c.name.toLowerCase());
         const overlappingContacts = contactsResult.data.filter(
           (contact: Contact) =>
             contact.company &&
             targetCompanies.includes(contact.company.toLowerCase()) &&
-            (!contact.last_contact_date ||
-              contact.last_contact_date < thirtyDaysAgoStr)
+            contact.warmth_level === "cold"
         );
 
         overlappingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
@@ -147,6 +184,30 @@ const Dashboard = () => {
             type: "company_overlap",
             contact,
             targetCompany: contact.company || undefined,
+          });
+        });
+      }
+
+      // 4. Fill remaining with other cold contacts
+      if (contactsResult.data && actions.length < 3) {
+        const coldContacts = contactsResult.data.filter(
+          (contact: Contact) =>
+            contact.warmth_level === "cold" &&
+            !actions.some(a => a.contact.id === contact.id)
+        );
+        
+        coldContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+          const daysAgo = contact.last_contact_date
+            ? Math.floor(
+                (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : null;
+          
+          actions.push({
+            type: "cold_contact",
+            contact,
+            daysAgo: daysAgo || undefined,
           });
         });
       }
