@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building2, Target } from "lucide-react";
+import { Plus, Building2, Target, Users } from "lucide-react";
 import { z } from "zod";
+import { format } from "date-fns";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -28,9 +29,22 @@ interface Company {
   priority: number;
 }
 
+interface Contact {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  role: string | null;
+  contact_type: string;
+  warmth_level: string | null;
+  last_contact_date: string | null;
+}
+
 const Companies = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     industry: "",
@@ -103,10 +117,55 @@ const Companies = () => {
     }
   };
 
+  const fetchCompanyContacts = async (companyName: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("company", companyName);
+
+    if (data) setCompanyContacts(data);
+  };
+
+  const handleCompanyClick = (company: Company) => {
+    setSelectedCompany(company);
+    fetchCompanyContacts(company.name);
+  };
+
   const getPriorityBadge = (priority: number) => {
     if (priority >= 3) return <Badge className="bg-red-500">High Priority</Badge>;
     if (priority >= 1) return <Badge className="bg-yellow-500">Medium Priority</Badge>;
     return <Badge variant="secondary">Low Priority</Badge>;
+  };
+
+  const getWarmthColor = (warmth: string | null) => {
+    switch (warmth) {
+      case "warm":
+        return "bg-warmth-warm text-warmth-warm-foreground";
+      case "cooling":
+        return "bg-warmth-cooling text-warmth-cooling-foreground";
+      case "cold":
+        return "bg-warmth-cold text-warmth-cold-foreground";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const groupContactsByWarmth = () => {
+    const groups = {
+      warm: companyContacts.filter(c => c.warmth_level === "warm"),
+      cooling: companyContacts.filter(c => c.warmth_level === "cooling"),
+      cold: companyContacts.filter(c => c.warmth_level === "cold"),
+    };
+    return groups;
+  };
+
+  const formatLastInteraction = (date: string | null) => {
+    if (!date) return "No interaction yet";
+    return format(new Date(date), "MMM d, yyyy");
   };
 
   return (
@@ -192,7 +251,11 @@ const Companies = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {companies.map((company) => (
-            <Card key={company.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={company.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleCompanyClick(company)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -215,7 +278,7 @@ const Companies = () => {
                   </div>
                 )}
                 {company.notes && (
-                  <p className="text-sm text-muted-foreground mt-3 line-clamp-3">
+                  <p className="text-sm text-muted-foreground line-clamp-2">
                     {company.notes}
                   </p>
                 )}
@@ -224,6 +287,102 @@ const Companies = () => {
           ))}
         </div>
       )}
+
+      {/* Company Detail Dialog */}
+      <Dialog open={!!selectedCompany} onOpenChange={(open) => !open && setSelectedCompany(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          {selectedCompany && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl flex items-center gap-2">
+                  <Building2 className="h-6 w-6" />
+                  {selectedCompany.name}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Company Details */}
+                <div className="space-y-2">
+                  {selectedCompany.industry && (
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Industry:</strong> {selectedCompany.industry}
+                    </p>
+                  )}
+                  {selectedCompany.target_role && (
+                    <p className="text-sm">
+                      <strong>Target Role:</strong> {selectedCompany.target_role}
+                    </p>
+                  )}
+                  {selectedCompany.notes && (
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Notes:</strong> {selectedCompany.notes}
+                    </p>
+                  )}
+                  <div className="pt-2">
+                    {getPriorityBadge(selectedCompany.priority)}
+                  </div>
+                </div>
+
+                {/* Paths Into This Company */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Paths Into This Company
+                  </h3>
+
+                  {companyContacts.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">
+                      No contacts linked to this company yet. Add contacts with this company to see potential paths.
+                    </p>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(groupContactsByWarmth()).map(([warmth, contacts]) => (
+                        contacts.length > 0 && (
+                          <div key={warmth}>
+                            <h4 className="font-medium mb-3 capitalize flex items-center gap-2">
+                              <Badge className={getWarmthColor(warmth)}>
+                                {warmth}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                ({contacts.length})
+                              </span>
+                            </h4>
+                            <div className="space-y-2">
+                              {contacts.map((contact) => (
+                                <Card key={contact.id} className="p-4">
+                                  <div className="flex items-start justify-between">
+                                    <div className="space-y-1 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium">{contact.name}</p>
+                                        <Badge variant="outline" className="text-xs">
+                                          {contact.contact_type}
+                                        </Badge>
+                                        <Badge className={`${getWarmthColor(contact.warmth_level)} text-xs`}>
+                                          {contact.warmth_level || "unknown"}
+                                        </Badge>
+                                      </div>
+                                      {contact.role && (
+                                        <p className="text-sm text-muted-foreground">{contact.role}</p>
+                                      )}
+                                      <p className="text-xs text-muted-foreground">
+                                        Last interaction: {formatLastInteraction(contact.last_contact_date)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
