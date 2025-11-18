@@ -38,9 +38,9 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
     
-    --warmth-cold: 217 91% 60%;
-    --warmth-warm: 45 93% 47%;
-    --warmth-hot: 142 76% 36%;
+    --warmth-warm: 142 76% 36%;
+    --warmth-cooling: 45 93% 47%;
+    --warmth-cold: 215 16.3% 46.9%;
 
     --sidebar-background: 0 0% 98%;
 

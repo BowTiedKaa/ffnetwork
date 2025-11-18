@@ -19,7 +19,7 @@ const contactSchema = z.object({
   company: z.string().trim().max(100, "Company name must be less than 100 characters").optional(),
   role: z.string().trim().max(100, "Role must be less than 100 characters").optional(),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
-  warmth_level: z.enum(["cold", "warm", "hot"]),
+  warmth_level: z.enum(["warm", "cooling", "cold"]),
   contact_type: z.enum(["connector", "trailblazer"]),
 });
 
@@ -131,11 +131,24 @@ const Contacts = () => {
 
   const getWarmthColor = (level: string) => {
     switch (level) {
-      case "cold": return "bg-blue-500";
-      case "warm": return "bg-yellow-500";
-      case "hot": return "bg-green-500";
-      default: return "bg-gray-500";
+      case "warm": return "bg-warmth-warm";
+      case "cooling": return "bg-warmth-cooling";
+      case "cold": return "bg-warmth-cold";
+      default: return "bg-warmth-cold";
     }
+  };
+
+  const formatLastInteraction = (date: string | null) => {
+    if (!date) return "No recent interaction";
+    const lastDate = new Date(date);
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff === 0) return "Today";
+    if (daysDiff === 1) return "Yesterday";
+    if (daysDiff < 30) return `${daysDiff} days ago`;
+    if (daysDiff < 60) return `${Math.floor(daysDiff / 7)} weeks ago`;
+    return `${Math.floor(daysDiff / 30)} months ago`;
   };
 
   const getContactTypeInfo = (type: string) => {
@@ -242,9 +255,9 @@ const Contacts = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cold">Cold - Haven't connected yet</SelectItem>
-                    <SelectItem value="warm">Warm - Had some conversations</SelectItem>
-                    <SelectItem value="hot">Hot - Strong relationship</SelectItem>
+                    <SelectItem value="warm">Warm - Recent contact (last 30 days)</SelectItem>
+                    <SelectItem value="cooling">Cooling - Contact 31-60 days ago</SelectItem>
+                    <SelectItem value="cold">Cold - No contact in 60+ days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -325,11 +338,16 @@ const Contacts = () => {
                           {contactTypeInfo.label}
                         </Badge>
                       </CardTitle>
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${getWarmthColor(contact.warmth_level)}`} />
-                        <span className="text-xs capitalize text-muted-foreground">
-                          {contact.warmth_level}
-                        </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${getWarmthColor(contact.warmth_level)}`} />
+                          <span className="text-xs capitalize text-muted-foreground">
+                            {contact.warmth_level}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Last interaction: {formatLastInteraction(contact.last_contact_date)}
+                        </p>
                       </div>
                     </div>
                   </div>
