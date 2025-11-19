@@ -195,6 +195,44 @@ export type Database = {
           },
         ]
       }
+      interactions: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          interaction_date: string
+          interaction_type: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          interaction_type: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          interaction_date?: string
+          interaction_type?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intro_pathways: {
         Row: {
           contact_id: string

@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Flame, Target, TrendingUp, Users, TrendingUp as TrailblazerIcon, Calendar, Building2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { LogInteractionDialog } from "@/components/LogInteractionDialog";
+import { SendMessageDialog } from "@/components/SendMessageDialog";
 
 interface DailyTask {
   id: string;
@@ -26,6 +28,7 @@ interface Streak {
 interface Contact {
   id: string;
   name: string;
+  email: string | null;
   company: string | null;
   contact_type: string;
   last_contact_date: string | null;
@@ -45,6 +48,9 @@ const Dashboard = () => {
   const [streak, setStreak] = useState<Streak | null>(null);
   const [todayActions, setTodayActions] = useState<TodayAction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logInteractionOpen, setLogInteractionOpen] = useState(false);
+  const [sendMessageOpen, setSendMessageOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -383,10 +389,23 @@ const Dashboard = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedContact(action.contact);
+                        setLogInteractionOpen(true);
+                      }}
+                    >
                       Log Interaction
                     </Button>
-                    <Button size="sm">
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedContact(action.contact);
+                        setSendMessageOpen(true);
+                      }}
+                    >
                       Send Message
                     </Button>
                   </div>
@@ -480,6 +499,29 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      {selectedContact && (
+        <>
+          <LogInteractionDialog
+            open={logInteractionOpen}
+            onOpenChange={setLogInteractionOpen}
+            contactId={selectedContact.id}
+            contactName={selectedContact.name}
+            onSuccess={() => {
+              fetchDashboardData();
+              setSelectedContact(null);
+            }}
+          />
+          <SendMessageDialog
+            open={sendMessageOpen}
+            onOpenChange={setSendMessageOpen}
+            contactName={selectedContact.name}
+            contactEmail={selectedContact.email}
+            companyName={selectedContact.company}
+          />
+        </>
+      )}
     </div>
   );
 };
