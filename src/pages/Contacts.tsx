@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Briefcase, Thermometer, Users, TrendingUp } from "lucide-react";
+import { Plus, Mail, Briefcase, Thermometer, Users, TrendingUp, Pencil } from "lucide-react";
 import { z } from "zod";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { EditContactDialog } from "@/components/EditContactDialog";
+import { format } from "date-fns";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -46,6 +48,7 @@ const Contacts = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [contactTypeStep, setContactTypeStep] = useState(true);
+  const [editContactId, setEditContactId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -392,6 +395,13 @@ const Contacts = () => {
                         </p>
                       </div>
                     </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEditContactId(contact.id)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -418,6 +428,19 @@ const Contacts = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Edit Contact Dialog */}
+      {editContactId && (
+        <EditContactDialog
+          open={!!editContactId}
+          onOpenChange={(open) => !open && setEditContactId(null)}
+          contactId={editContactId}
+          onSuccess={() => {
+            fetchContacts();
+            setEditContactId(null);
+          }}
+        />
       )}
     </div>
   );

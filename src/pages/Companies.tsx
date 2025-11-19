@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building2, Target, Users } from "lucide-react";
+import { Plus, Building2, Target, Users, Pencil } from "lucide-react";
 import { z } from "zod";
 import { format } from "date-fns";
+import { EditCompanyDialog } from "@/components/EditCompanyDialog";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -45,6 +46,7 @@ const Companies = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
+  const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     industry: "",
@@ -254,15 +256,28 @@ const Companies = () => {
             <Card 
               key={company.id} 
               className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleCompanyClick(company)}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    {company.name}
-                  </CardTitle>
-                  {getPriorityBadge(company.priority)}
+                  <div className="flex-1" onClick={() => handleCompanyClick(company)}>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      {company.name}
+                    </CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getPriorityBadge(company.priority)}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditCompanyId(company.id);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -383,6 +398,19 @@ const Companies = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Company Dialog */}
+      {editCompanyId && (
+        <EditCompanyDialog
+          open={!!editCompanyId}
+          onOpenChange={(open) => !open && setEditCompanyId(null)}
+          companyId={editCompanyId}
+          onSuccess={() => {
+            fetchCompanies();
+            setEditCompanyId(null);
+          }}
+        />
+      )}
     </div>
   );
 };
