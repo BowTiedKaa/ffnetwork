@@ -50,6 +50,7 @@ export type Database = {
       contacts: {
         Row: {
           company: string | null
+          company_id: string | null
           contact_type: string
           created_at: string | null
           email: string | null
@@ -64,6 +65,7 @@ export type Database = {
         }
         Insert: {
           company?: string | null
+          company_id?: string | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
@@ -78,6 +80,7 @@ export type Database = {
         }
         Update: {
           company?: string | null
+          company_id?: string | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
@@ -90,7 +93,15 @@ export type Database = {
           user_id?: string
           warmth_level?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_tasks: {
         Row: {

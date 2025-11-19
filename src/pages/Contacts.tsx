@@ -28,6 +28,7 @@ interface Contact {
   name: string;
   email: string | null;
   company: string | null;
+  company_id: string | null;
   role: string | null;
   warmth_level: string;
   last_contact_date: string | null;
@@ -35,8 +36,14 @@ interface Contact {
   contact_type: string;
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 const Contacts = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [contactTypeStep, setContactTypeStep] = useState(true);
   const [formData, setFormData] = useState({
@@ -52,6 +59,7 @@ const Contacts = () => {
 
   useEffect(() => {
     fetchContacts();
+    fetchCompanies();
   }, []);
 
   const fetchContacts = async () => {
@@ -68,6 +76,19 @@ const Contacts = () => {
     // Error silently handled - user will see empty state
   };
 
+  const fetchCompanies = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true });
+
+    if (data) setCompanies(data);
+  };
+
   const handleContactTypeSelect = (type: "connector" | "trailblazer") => {
     setFormData({ ...formData, contact_type: type });
     setContactTypeStep(false);
@@ -81,11 +102,17 @@ const Contacts = () => {
     try {
       const validatedData = contactSchema.parse(formData);
 
+      // Find the company ID if a company name is provided
+      const selectedCompany = companies.find(
+        c => c.name.toLowerCase() === validatedData.company?.toLowerCase()
+      );
+
       const { error } = await supabase.from("contacts").insert({
         user_id: user.id,
         name: validatedData.name,
         email: validatedData.email || null,
         company: validatedData.company || null,
+        company_id: selectedCompany?.id || null,
         role: validatedData.role || null,
         warmth_level: validatedData.warmth_level,
         notes: validatedData.notes || null,
@@ -234,11 +261,26 @@ const Contacts = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                />
+                <Select 
+                  value={formData.company} 
+                  onValueChange={(value) => setFormData({ ...formData, company: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a company (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.name}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {companies.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Add companies in the Companies tab first
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
