@@ -117,7 +117,7 @@ const Companies = () => {
     }
   };
 
-  const fetchCompanyContacts = async (companyName: string) => {
+  const fetchCompanyContacts = async (companyId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -125,14 +125,14 @@ const Companies = () => {
       .from("contacts")
       .select("*")
       .eq("user_id", user.id)
-      .eq("company", companyName);
+      .eq("company_id", companyId);
 
     if (data) setCompanyContacts(data);
   };
 
   const handleCompanyClick = (company: Company) => {
     setSelectedCompany(company);
-    fetchCompanyContacts(company.name);
+    fetchCompanyContacts(company.id);
   };
 
   const getPriorityBadge = (priority: number) => {
