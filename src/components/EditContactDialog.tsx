@@ -8,6 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -38,6 +42,8 @@ export const EditContactDialog = ({
   onSuccess,
 }: EditContactDialogProps) => {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
+  const [companySearchValue, setCompanySearchValue] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -99,10 +105,40 @@ export const EditContactDialog = ({
 
     try {
       const validatedData = contactSchema.parse(formData);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      const selectedCompany = companies.find(
-        c => c.name.toLowerCase() === validatedData.company?.toLowerCase()
-      );
+      let companyId = null;
+
+      if (validatedData.company) {
+        // First, try to find an existing company (case-insensitive)
+        let selectedCompany = companies.find(
+          c => c.name.toLowerCase().trim() === validatedData.company!.toLowerCase().trim()
+        );
+
+        // If no match, create a new company
+        if (!selectedCompany) {
+          const { data: newCompany, error: companyError } = await supabase
+            .from("companies")
+            .insert({
+              user_id: user.id,
+              name: validatedData.company.trim(),
+              priority: 0,
+            })
+            .select("id, name")
+            .single();
+
+          if (newCompany) {
+            selectedCompany = newCompany;
+            // Refresh companies list
+            setCompanies([...companies, newCompany].sort((a, b) =>
+              a.name.localeCompare(b.name)
+            ));
+          }
+        }
+
+        companyId = selectedCompany?.id || null;
+      }
 
       const { error } = await supabase
         .from("contacts")
@@ -110,7 +146,7 @@ export const EditContactDialog = ({
           name: validatedData.name,
           email: validatedData.email || null,
           company: validatedData.company || null,
-          company_id: selectedCompany?.id || null,
+          company_id: companyId,
           role: validatedData.role || null,
           warmth_level: validatedData.warmth_level,
           notes: validatedData.notes || null,
@@ -188,21 +224,71 @@ export const EditContactDialog = ({
 
           <div className="space-y-2">
             <Label htmlFor="company">Company</Label>
-            <Select 
-              value={formData.company} 
-              onValueChange={(value) => setFormData({ ...formData, company: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a company (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.name}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={companyPopoverOpen} onOpenChange={setCompanyPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={companyPopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {formData.company || "Select a company (optional)"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search or type a new company..." 
+                    value={companySearchValue}
+                    onValueChange={setCompanySearchValue}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      <button
+                        type="button"
+                        className="w-full p-2 text-sm text-left hover:bg-accent rounded"
+                        onClick={() => {
+                          setFormData({ ...formData, company: companySearchValue });
+                          setCompanyPopoverOpen(false);
+                          setCompanySearchValue("");
+                        }}
+                      >
+                        Create "{companySearchValue}" as a new company
+                      </button>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {companies
+                        .filter(company => 
+                          company.name.toLowerCase().includes(companySearchValue.toLowerCase())
+                        )
+                        .map((company) => (
+                          <CommandItem
+                            key={company.id}
+                            value={company.name}
+                            onSelect={(value) => {
+                              setFormData({ ...formData, company: value });
+                              setCompanyPopoverOpen(false);
+                              setCompanySearchValue("");
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.company === company.name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {company.name}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">
+              Add or select a company so this contact shows up as a path into that company.
+            </p>
           </div>
 
           <div className="space-y-2">
