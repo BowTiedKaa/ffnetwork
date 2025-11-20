@@ -55,6 +55,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    backfillCompanyIds();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -223,6 +224,61 @@ const Dashboard = () => {
       // Error silently handled - user will see empty state
     } finally {
       setLoading(false);
+    }
+  };
+
+  const backfillCompanyIds = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch contacts that need backfilling (have company text but no company_id)
+      const { data: contactsNeedingBackfill } = await supabase
+        .from("contacts")
+        .select("id, company")
+        .eq("user_id", user.id)
+        .not("company", "is", null)
+        .is("company_id", null);
+
+      if (!contactsNeedingBackfill || contactsNeedingBackfill.length === 0) {
+        return; // Nothing to backfill
+      }
+
+      // Fetch all user's companies for matching
+      const { data: companies } = await supabase
+        .from("companies")
+        .select("id, name")
+        .eq("user_id", user.id);
+
+      if (!companies) return;
+
+      // Create a case-insensitive lookup map
+      const companyMap = new Map(
+        companies.map(c => [c.name.toLowerCase().trim(), c.id])
+      );
+
+      // Prepare batch updates
+      const updates = contactsNeedingBackfill
+        .map(contact => {
+          const companyId = companyMap.get(contact.company!.toLowerCase().trim());
+          if (companyId) {
+            return supabase
+              .from("contacts")
+              .update({ company_id: companyId })
+              .eq("id", contact.id);
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      // Execute all updates in parallel
+      if (updates.length > 0) {
+        await Promise.all(updates);
+        console.log(`Backfilled ${updates.length} contact(s) with company IDs`);
+      }
+    } catch (error) {
+      console.error("Error backfilling company IDs:", error);
+      // Fail silently - this is a background maintenance task
     }
   };
 
