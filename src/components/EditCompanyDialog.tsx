@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -38,6 +40,7 @@ export const EditCompanyDialog = ({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -112,6 +115,52 @@ export const EditCompanyDialog = ({
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // First, clear company references from contacts
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({ company_id: null, company: null })
+        .eq("company_id", companyId)
+        .eq("user_id", user.id);
+
+      if (updateError) {
+        console.error("Error clearing company from contacts:", updateError);
+      }
+
+      // Then delete the company
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", companyId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Company deleted",
+        description: "The company has been removed from your targets.",
+      });
+
+      onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      console.error("Failed to delete company:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete company",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,18 +231,48 @@ export const EditCompanyDialog = ({
             />
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
+          <div className="flex gap-2 justify-between">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting || isDeleting}
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete company?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove this company from your targets. Contacts linked to this company will stay in your contact list but will have their company cleared.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isDeleting ? "Deleting..." : "Delete company"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting || isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || isDeleting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

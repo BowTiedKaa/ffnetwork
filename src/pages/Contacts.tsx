@@ -13,7 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Briefcase, Thermometer, Users, TrendingUp, Pencil } from "lucide-react";
+import { Plus, Mail, Briefcase, Thermometer, Users, TrendingUp, Pencil, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EditContactDialog } from "@/components/EditContactDialog";
@@ -53,6 +54,7 @@ const Contacts = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [contactTypeStep, setContactTypeStep] = useState(true);
   const [editContactId, setEditContactId] = useState<string | null>(null);
+  const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [companySearchValue, setCompanySearchValue] = useState("");
   const [formData, setFormData] = useState({
@@ -181,6 +183,61 @@ const Contacts = () => {
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const handleDeleteContact = async () => {
+    if (!deleteContactId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      // Delete related interactions
+      const { error: interactionsError } = await supabase
+        .from("interactions")
+        .delete()
+        .eq("contact_id", deleteContactId)
+        .eq("user_id", user.id);
+
+      if (interactionsError) {
+        console.error("Error deleting interactions:", interactionsError);
+      }
+
+      // Delete related follow-ups
+      const { error: followUpsError } = await supabase
+        .from("follow_ups")
+        .delete()
+        .eq("contact_id", deleteContactId)
+        .eq("user_id", user.id);
+
+      if (followUpsError) {
+        console.error("Error deleting follow-ups:", followUpsError);
+      }
+
+      // Delete the contact
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", deleteContactId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Contact deleted",
+        description: "The contact has been removed from your list.",
+      });
+
+      setDeleteContactId(null);
+      fetchContacts();
+    } catch (error) {
+      console.error("Failed to delete contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete contact",
+        variant: "destructive",
+      });
     }
   };
 
@@ -473,13 +530,22 @@ const Contacts = () => {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setEditContactId(contact.id)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setEditContactId(contact.id)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setDeleteContactId(contact.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -520,6 +586,24 @@ const Contacts = () => {
           }}
         />
       )}
+
+      {/* Delete Contact Confirmation Dialog */}
+      <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete contact?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove this contact and their interactions from your networking app. You can always add them again later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete contact
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
