@@ -43,6 +43,8 @@ interface Contact {
   contact_type: string;
   warmth_level: string | null;
   last_contact_date: string | null;
+  company_id: string | null;
+  connector_influence_company_ids: string[] | null;
 }
 
 const Companies = () => {
@@ -347,6 +349,44 @@ const Companies = () => {
     return groups;
   };
 
+  const calculatePathStrength = (contact: Contact, companyId: string) => {
+    // Connector with influence at this company
+    if (
+      contact.contact_type === "connector" &&
+      contact.connector_influence_company_ids?.includes(companyId)
+    ) {
+      return 90;
+    }
+    // Connector who works there
+    if (contact.contact_type === "connector" && contact.company_id === companyId) {
+      return 80;
+    }
+    // Trailblazer
+    if (contact.contact_type === "trailblazer") {
+      return 60;
+    }
+    // Reliable recruiter
+    if (contact.contact_type === "reliable_recruiter") {
+      return 50;
+    }
+    // Other
+    return 20;
+  };
+
+  const getPathStrengthBadge = (strength: number) => {
+    if (strength >= 80) return <Badge className="bg-green-600 text-white text-xs">Strong</Badge>;
+    if (strength >= 50) return <Badge className="bg-yellow-600 text-white text-xs">Warm</Badge>;
+    return <Badge variant="outline" className="text-xs">Weak</Badge>;
+  };
+
+  const sortContactsByPathStrength = (contacts: Contact[], companyId: string) => {
+    return [...contacts].sort((a, b) => {
+      const strengthA = calculatePathStrength(a, companyId);
+      const strengthB = calculatePathStrength(b, companyId);
+      return strengthB - strengthA;
+    });
+  };
+
   const formatLastInteraction = (date: string | null) => {
     if (!date) return "No interaction yet";
     return format(new Date(date), "MMM d, yyyy");
@@ -573,59 +613,63 @@ const Companies = () => {
                     <p className="text-muted-foreground text-sm">
                       No contacts linked to this company yet. Add contacts with this company to see potential paths.
                     </p>
-                  ) : (
-                    <div className="space-y-6">
-                      {Object.entries(groupContactsByWarmth()).map(([warmth, contacts]) => (
-                        contacts.length > 0 && (
-                          <div key={warmth}>
-                            <h4 className="font-medium mb-3 capitalize flex items-center gap-2">
-                              <Badge className={getWarmthColor(warmth)}>
-                                {warmth}
-                              </Badge>
-                              <span className="text-sm text-muted-foreground">
-                                ({contacts.length})
-                              </span>
-                            </h4>
-                            <div className="space-y-2">
-                              {contacts.map((contact) => (
-                                <Card key={contact.id} className="p-4">
-                                  <div className="flex items-start justify-between">
-                                    <div className="space-y-1 flex-1">
-                                       <div className="flex items-center gap-2">
-                                         <p className="font-medium">{contact.name}</p>
-                                         <Badge variant="outline" className={
-                                           contact.contact_type === "connector"
-                                             ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs"
-                                             : contact.contact_type === "trailblazer"
-                                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
-                                             : contact.contact_type === "reliable_recruiter"
-                                             ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
-                                             : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 text-xs"
-                                         }>
-                                           {contact.contact_type === "connector" && "Connector"}
-                                           {contact.contact_type === "trailblazer" && "Trailblazer"}
-                                           {contact.contact_type === "reliable_recruiter" && "Reliable Recruiter"}
-                                           {contact.contact_type === "unspecified" && "Unspecified"}
-                                           {!["connector", "trailblazer", "reliable_recruiter", "unspecified"].includes(contact.contact_type) && "Unspecified"}
-                                         </Badge>
-                                         <Badge className={`${getWarmthColor(contact.warmth_level)} text-xs`}>
-                                           {contact.warmth_level || "unknown"}
-                                         </Badge>
-                                       </div>
-                                      {contact.role && (
-                                        <p className="text-sm text-muted-foreground">{contact.role}</p>
-                                      )}
-                                      <p className="text-xs text-muted-foreground">
-                                        Last interaction: {formatLastInteraction(contact.last_contact_date)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      ))}
+                   ) : (
+                     <div className="space-y-6">
+                       {Object.entries(groupContactsByWarmth()).map(([warmth, contacts]) => {
+                         const sortedContacts = sortContactsByPathStrength(contacts, selectedCompany.id);
+                         return sortedContacts.length > 0 && (
+                           <div key={warmth}>
+                             <h4 className="font-medium mb-3 capitalize flex items-center gap-2">
+                               <Badge className={getWarmthColor(warmth)}>
+                                 {warmth}
+                               </Badge>
+                               <span className="text-sm text-muted-foreground">
+                                 ({sortedContacts.length})
+                               </span>
+                             </h4>
+                             <div className="space-y-2">
+                               {sortedContacts.map((contact) => {
+                                 const pathStrength = calculatePathStrength(contact, selectedCompany.id);
+                                 return (
+                                 <Card key={contact.id} className="p-4">
+                                   <div className="flex items-start justify-between">
+                                     <div className="space-y-1 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <p className="font-medium">{contact.name}</p>
+                                          {getPathStrengthBadge(pathStrength)}
+                                          <Badge variant="outline" className={
+                                            contact.contact_type === "connector"
+                                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs"
+                                              : contact.contact_type === "trailblazer"
+                                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
+                                              : contact.contact_type === "reliable_recruiter"
+                                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
+                                              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 text-xs"
+                                          }>
+                                            {contact.contact_type === "connector" && "Connector"}
+                                            {contact.contact_type === "trailblazer" && "Trailblazer"}
+                                            {contact.contact_type === "reliable_recruiter" && "Reliable Recruiter"}
+                                            {contact.contact_type === "unspecified" && "Unspecified"}
+                                            {!["connector", "trailblazer", "reliable_recruiter", "unspecified"].includes(contact.contact_type) && "Unspecified"}
+                                          </Badge>
+                                          <Badge className={`${getWarmthColor(contact.warmth_level)} text-xs`}>
+                                            {contact.warmth_level || "unknown"}
+                                          </Badge>
+                                        </div>
+                                       {contact.role && (
+                                         <p className="text-sm text-muted-foreground">{contact.role}</p>
+                                       )}
+                                       <p className="text-xs text-muted-foreground">
+                                         Last interaction: {formatLastInteraction(contact.last_contact_date)}
+                                       </p>
+                                     </div>
+                                   </div>
+                                 </Card>
+                               )})}
+                             </div>
+                           </div>
+                         );
+                       })}
                     </div>
                   )}
                 </div>

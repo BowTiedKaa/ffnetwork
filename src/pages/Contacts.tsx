@@ -13,12 +13,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, TrendingUp, Pencil, Trash2, Mail, Briefcase, Archive, ArchiveRestore } from "lucide-react";
+import { Plus, Users, TrendingUp, Pencil, Trash2, Mail, Briefcase, Archive, ArchiveRestore, MessageSquare } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EditContactDialog } from "@/components/EditContactDialog";
+import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { format } from "date-fns";
 
 const contactSchema = z.object({
@@ -64,6 +65,8 @@ const Contacts = () => {
   const [archiveContactId, setArchiveContactId] = useState<string | null>(null);
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [companySearchValue, setCompanySearchValue] = useState("");
+  const [selectedContactForMessage, setSelectedContactForMessage] = useState<Contact | null>(null);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -363,6 +366,35 @@ const Contacts = () => {
           className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
         };
     }
+  };
+
+  const getSuggestedActions = (contact: Contact) => {
+    switch (contact.contact_type) {
+      case "connector":
+        return [
+          { label: "Ask for intro", action: () => handleSendMessage(contact, "intro") },
+          { label: "Warm-up message", action: () => handleSendMessage(contact, "warmup") },
+        ];
+      case "trailblazer":
+        return [
+          { label: "Ask about transition", action: () => handleSendMessage(contact, "transition") },
+          { label: "Ask for advice", action: () => handleSendMessage(contact, "advice") },
+        ];
+      case "reliable_recruiter":
+        return [
+          { label: "How teams evaluate", action: () => handleSendMessage(contact, "evaluation") },
+          { label: "Ask for feedback", action: () => handleSendMessage(contact, "feedback") },
+        ];
+      default:
+        return [
+          { label: "Reconnect", action: () => handleSendMessage(contact, "reconnect") },
+        ];
+    }
+  };
+
+  const handleSendMessage = (contact: Contact, _actionType: string) => {
+    setSelectedContactForMessage(contact);
+    setMessageDialogOpen(true);
   };
 
   return (
@@ -756,6 +788,27 @@ const Contacts = () => {
                       {contact.notes}
                     </p>
                   )}
+
+                  {/* Suggested Actions */}
+                  {!contact.is_archived && (
+                    <div className="pt-3 border-t mt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Suggested Actions</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getSuggestedActions(contact).map((action, idx) => (
+                          <Button
+                            key={idx}
+                            size="sm"
+                            variant="outline"
+                            onClick={action.action}
+                            className="gap-1 h-7 text-xs"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            {action.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -815,6 +868,19 @@ const Contacts = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Send Message Dialog */}
+      {selectedContactForMessage && (
+        <SendMessageDialog
+          open={messageDialogOpen}
+          onOpenChange={setMessageDialogOpen}
+          contactName={selectedContactForMessage.name}
+          contactEmail={selectedContactForMessage.email}
+          companyName={selectedContactForMessage.company}
+          contactType={selectedContactForMessage.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified"}
+          targetRole={selectedContactForMessage.role}
+        />
+      )}
     </div>
   );
 };
