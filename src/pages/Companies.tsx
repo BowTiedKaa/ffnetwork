@@ -199,20 +199,31 @@ const Companies = () => {
       .not("company", "is", null)
       .eq("is_archived", false);
 
-    if (byNameError) {
-      console.error("Error fetching contacts by company name", byNameError);
+    let byNameMatches: any[] = [];
+    if (!byNameError && byName) {
+      byNameMatches = byName.filter(c => c.company && normalize(c.company) === normalizedCompanyName);
     }
 
-    const filteredByName = (byName || []).filter(contact =>
-      contact.company && normalize(contact.company) === normalizedCompanyName
-    );
+    // 3. Fetch connectors who have influence with this company
+    const { data: connectors, error: errorConnectors } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("contact_type", "connector")
+      .contains("connector_influence_company_ids", [companyId])
+      .eq("is_archived", false);
 
-    // 3. Merge and dedupe by id
-    const mergedMap = new Map<string, Contact>();
-    for (const c of byId || []) mergedMap.set(c.id, c);
-    for (const c of filteredByName) mergedMap.set(c.id, c);
+    if (errorConnectors) {
+      console.error("Error fetching connector contacts:", errorConnectors);
+    }
 
-    setCompanyContacts(Array.from(mergedMap.values()));
+    // Merge and dedupe
+    const allContacts = [...(byId || []), ...byNameMatches, ...(connectors || [])];
+    const uniqueContactsMap = new Map();
+    for (const c of allContacts) {
+      uniqueContactsMap.set(c.id, c);
+    }
+    setCompanyContacts(Array.from(uniqueContactsMap.values()));
   };
 
   const handleCompanyClick = (company: Company) => {

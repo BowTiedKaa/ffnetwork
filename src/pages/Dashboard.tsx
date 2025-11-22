@@ -30,6 +30,7 @@ interface Contact {
   name: string;
   email: string | null;
   company: string | null;
+  role: string | null;
   contact_type: string;
   last_contact_date: string | null;
   warmth_level: string;
@@ -596,6 +597,8 @@ const Dashboard = () => {
             contactName={selectedContact.name}
             contactEmail={selectedContact.email}
             companyName={selectedContact.company}
+            contactType={selectedContact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified" | null}
+            targetRole={selectedContact.role}
           />
         </>
       )}
