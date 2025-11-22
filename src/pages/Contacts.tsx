@@ -360,7 +360,7 @@ const Contacts = () => {
                   </PopoverContent>
                 </Popover>
                 <p className="text-xs text-muted-foreground">
-                  Add or select a company so this contact shows up as a path into that company.
+                  Select or create a company so this contact appears as a path into that company.
                 </p>
               </div>
               <div className="space-y-2">

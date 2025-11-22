@@ -12,6 +12,7 @@ import { Plus, Building2, Target, Users, Pencil } from "lucide-react";
 import { z } from "zod";
 import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
+import { backfillCompanyIdsForCurrentUser } from "@/lib/backfillCompanyIds";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -58,6 +59,7 @@ const Companies = () => {
 
   useEffect(() => {
     fetchCompanies();
+    backfillCompanyIdsForCurrentUser(); // Backfill company_id for older contacts
   }, []);
 
   const fetchCompanies = async () => {
@@ -123,13 +125,42 @@ const Companies = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    const normalize = (name: string) => name.trim().toLowerCase();
+    const normalizedCompanyName = normalize(companyName);
+
+    // 1. Contacts with matching company_id
+    const { data: byId, error: byIdError } = await supabase
       .from("contacts")
       .select("*")
       .eq("user_id", user.id)
-      .or(`company_id.eq.${companyId},and(company_id.is.null,company.ilike.${companyName})`);
+      .eq("company_id", companyId);
 
-    if (data) setCompanyContacts(data);
+    if (byIdError) {
+      console.error("Error fetching contacts by company_id", byIdError);
+    }
+
+    // 2. Contacts with null company_id but matching company name (case-insensitive)
+    const { data: byName, error: byNameError } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", user.id)
+      .is("company_id", null)
+      .not("company", "is", null);
+
+    if (byNameError) {
+      console.error("Error fetching contacts by company name", byNameError);
+    }
+
+    const filteredByName = (byName || []).filter(contact =>
+      contact.company && normalize(contact.company) === normalizedCompanyName
+    );
+
+    // 3. Merge and dedupe by id
+    const mergedMap = new Map<string, Contact>();
+    for (const c of byId || []) mergedMap.set(c.id, c);
+    for (const c of filteredByName) mergedMap.set(c.id, c);
+
+    setCompanyContacts(Array.from(mergedMap.values()));
   };
 
   const handleCompanyClick = (company: Company) => {
