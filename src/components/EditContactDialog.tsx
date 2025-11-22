@@ -195,9 +195,10 @@ export const EditContactDialog = ({
           variant: "destructive",
         });
       } else {
+        console.error("Supabase contact update error:", error);
         toast({
           title: "Error",
-          description: "Failed to update contact",
+          description: error instanceof Error ? error.message : "Failed to update contact",
           variant: "destructive",
         });
       }
