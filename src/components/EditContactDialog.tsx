@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 const contactSchema = z.object({
@@ -55,6 +56,7 @@ export const EditContactDialog = ({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -179,6 +181,63 @@ export const EditContactDialog = ({
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Delete related interactions
+      const { error: interactionsError } = await supabase
+        .from("interactions")
+        .delete()
+        .eq("contact_id", contactId)
+        .eq("user_id", user.id);
+
+      if (interactionsError) {
+        console.error("Error deleting interactions:", interactionsError);
+      }
+
+      // Delete related follow-ups
+      const { error: followUpsError } = await supabase
+        .from("follow_ups")
+        .delete()
+        .eq("contact_id", contactId)
+        .eq("user_id", user.id);
+
+      if (followUpsError) {
+        console.error("Error deleting follow-ups:", followUpsError);
+      }
+
+      // Delete the contact
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", contactId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Contact deleted",
+        description: "The contact has been removed from your list.",
+      });
+
+      onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      console.error("Failed to delete contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete contact",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -345,18 +404,48 @@ export const EditContactDialog = ({
             />
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
+          <div className="flex gap-2 justify-between">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting || isDeleting}
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete contact?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove this contact and their interactions from your networking app. You can always add them again later.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isDeleting ? "Deleting..." : "Delete contact"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting || isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || isDeleting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

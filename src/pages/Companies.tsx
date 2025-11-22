@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building2, Target, Users, Pencil } from "lucide-react";
+import { Plus, Building2, Target, Users, Pencil, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
@@ -47,6 +48,7 @@ const Companies = () => {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
   const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
+  const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     industry: "",
@@ -210,6 +212,52 @@ const Companies = () => {
     fetchCompanyContacts(company.id, company.name);
   };
 
+  const handleDeleteCompany = async () => {
+    if (!deleteCompanyId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      // First, clear company references from contacts
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({ company_id: null, company: null })
+        .eq("company_id", deleteCompanyId)
+        .eq("user_id", user.id);
+
+      if (updateError) {
+        console.error("Error clearing company from contacts:", updateError);
+      }
+
+      // Then delete the company
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", deleteCompanyId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Company deleted",
+        description: "The company has been removed from your targets.",
+      });
+
+      setDeleteCompanyId(null);
+      setSelectedCompany(null);
+      setCompanyContacts([]);
+      fetchCompanies();
+    } catch (error) {
+      console.error("Failed to delete company:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete company",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getPriorityBadge = (priority: number) => {
     if (priority >= 3) return <Badge className="bg-red-500">High Priority</Badge>;
     if (priority >= 1) return <Badge className="bg-yellow-500">Medium Priority</Badge>;
@@ -350,6 +398,16 @@ const Companies = () => {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteCompanyId(company.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -484,6 +542,24 @@ const Companies = () => {
           }}
         />
       )}
+
+      {/* Delete Company Confirmation Dialog */}
+      <AlertDialog open={!!deleteCompanyId} onOpenChange={(open) => !open && setDeleteCompanyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete company?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove this company from your targets. Contacts linked to this company will stay in your contact list but will have their company cleared.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCompany} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete company
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
