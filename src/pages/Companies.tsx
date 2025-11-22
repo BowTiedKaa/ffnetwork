@@ -12,7 +12,6 @@ import { Plus, Building2, Target, Users, Pencil } from "lucide-react";
 import { z } from "zod";
 import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
-import { backfillCompanyIdsForCurrentUser } from "@/lib/backfillCompanyIds";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -56,6 +55,49 @@ const Companies = () => {
     priority: 0,
   });
   const { toast } = useToast();
+
+  const backfillCompanyIdsForCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: contacts, error: contactsError } = await supabase
+      .from("contacts")
+      .select("id, company")
+      .eq("user_id", user.id)
+      .is("company_id", null)
+      .not("company", "is", null);
+
+    if (contactsError || !contacts || contacts.length === 0) return;
+
+    const { data: companies, error: companiesError } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("user_id", user.id);
+
+    if (companiesError || !companies || companies.length === 0) return;
+
+    const normalize = (name: string) => name.trim().toLowerCase();
+    const companyMap = new Map<string, string>();
+
+    for (const c of companies) {
+      if (c.name) {
+        companyMap.set(normalize(c.name), c.id);
+      }
+    }
+
+    for (const contact of contacts) {
+      if (!contact.company) continue;
+      const key = normalize(contact.company);
+      const companyId = companyMap.get(key);
+      if (!companyId) continue;
+
+      await supabase
+        .from("contacts")
+        .update({ company_id: companyId })
+        .eq("id", contact.id)
+        .eq("user_id", user.id);
+    }
+  };
 
   useEffect(() => {
     fetchCompanies();
