@@ -13,8 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Briefcase, Thermometer, Users, TrendingUp, Pencil, Trash2 } from "lucide-react";
+import { Plus, Users, TrendingUp, Pencil, Trash2, Mail, Briefcase, Archive, ArchiveRestore } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { z } from "zod";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EditContactDialog } from "@/components/EditContactDialog";
@@ -41,6 +42,8 @@ interface Contact {
   last_contact_date: string | null;
   notes: string | null;
   contact_type: string;
+  is_archived: boolean;
+  archived_at: string | null;
 }
 
 interface Company {
@@ -55,6 +58,8 @@ const Contacts = () => {
   const [contactTypeStep, setContactTypeStep] = useState(true);
   const [editContactId, setEditContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveContactId, setArchiveContactId] = useState<string | null>(null);
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [companySearchValue, setCompanySearchValue] = useState("");
   const [formData, setFormData] = useState({
@@ -71,7 +76,7 @@ const Contacts = () => {
   useEffect(() => {
     fetchContacts();
     fetchCompanies();
-  }, []);
+  }, [showArchived]);
 
   const fetchContacts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -81,6 +86,7 @@ const Contacts = () => {
       .from("contacts")
       .select("*")
       .eq("user_id", user.id)
+      .eq("is_archived", showArchived)
       .order("created_at", { ascending: false });
 
     if (data) setContacts(data);
@@ -241,6 +247,46 @@ const Contacts = () => {
     }
   };
 
+  const handleArchiveContact = async () => {
+    if (!archiveContactId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const contactToArchive = contacts.find(c => c.id === archiveContactId);
+    const isArchiving = !contactToArchive?.is_archived;
+
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .update({ 
+          is_archived: isArchiving,
+          archived_at: isArchiving ? new Date().toISOString() : null
+        })
+        .eq("id", archiveContactId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: isArchiving ? "Contact archived" : "Contact restored",
+        description: isArchiving 
+          ? "The contact has been archived and hidden from your main lists."
+          : "The contact has been restored to your active contacts.",
+      });
+
+      setArchiveContactId(null);
+      fetchContacts();
+    } catch (error) {
+      console.error("Failed to archive/restore contact:", error);
+      toast({
+        title: "Error",
+        description: `Failed to ${isArchiving ? "archive" : "restore"} contact`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDialogChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
@@ -289,11 +335,22 @@ const Contacts = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">Contacts</h1>
           <p className="text-muted-foreground">Manage your professional network</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={handleDialogChange}>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-archived"
+              checked={showArchived}
+              onCheckedChange={setShowArchived}
+            />
+            <Label htmlFor="show-archived" className="text-sm cursor-pointer">
+              Show archived
+            </Label>
+          </div>
+          <Dialog open={isOpen} onOpenChange={handleDialogChange}>
           <Button onClick={() => setIsOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Add Contact
@@ -460,6 +517,7 @@ const Contacts = () => {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {contacts.length === 0 ? (
@@ -513,6 +571,9 @@ const Contacts = () => {
                     <div className="flex-1">
                       <CardTitle className="text-lg flex items-center gap-2 mb-2">
                         {contact.name}
+                        {contact.is_archived && (
+                          <Badge variant="secondary" className="ml-2">Archived</Badge>
+                        )}
                         <Badge variant="secondary" className={contactTypeInfo.className}>
                           <ContactIcon className="h-3 w-3 mr-1" />
                           {contactTypeInfo.label}
@@ -541,10 +602,24 @@ const Contacts = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => setDeleteContactId(contact.id)}
+                        onClick={() => setArchiveContactId(contact.id)}
+                        title={contact.is_archived ? "Restore contact" : "Archive contact"}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        {contact.is_archived ? (
+                          <ArchiveRestore className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
                       </Button>
+                      {!contact.is_archived && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setDeleteContactId(contact.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -587,13 +662,35 @@ const Contacts = () => {
         />
       )}
 
+      {/* Archive Contact Confirmation Dialog */}
+      <AlertDialog open={!!archiveContactId} onOpenChange={(open) => !open && setArchiveContactId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {contacts.find(c => c.id === archiveContactId)?.is_archived ? "Restore contact?" : "Archive contact?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {contacts.find(c => c.id === archiveContactId)?.is_archived
+                ? "This contact will be restored to your active contacts and will appear in your main lists and daily actions."
+                : "This contact will be hidden from your main lists and daily actions, but their history will be kept. You can restore them later."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchiveContact}>
+              {contacts.find(c => c.id === archiveContactId)?.is_archived ? "Restore contact" : "Archive contact"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Delete Contact Confirmation Dialog */}
       <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete contact?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove this contact and their interactions from your networking app. You can always add them again later.
+              This will permanently remove this contact and their interactions from your networking app. You can always add them again later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

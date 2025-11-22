@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building2, Target, Users, Pencil, Trash2 } from "lucide-react";
+import { Plus, Building2, Target, Users, Pencil, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
+import { Switch } from "@/components/ui/switch";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -29,6 +30,8 @@ interface Company {
   target_role: string | null;
   notes: string | null;
   priority: number;
+  is_archived: boolean;
+  archived_at: string | null;
 }
 
 interface Contact {
@@ -49,6 +52,8 @@ const Companies = () => {
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
   const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
   const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveCompanyId, setArchiveCompanyId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     industry: "",
@@ -104,7 +109,7 @@ const Companies = () => {
   useEffect(() => {
     fetchCompanies();
     backfillCompanyIdsForCurrentUser(); // Backfill company_id for older contacts
-  }, []);
+  }, [showArchived]);
 
   const fetchCompanies = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -114,6 +119,7 @@ const Companies = () => {
       .from("companies")
       .select("*")
       .eq("user_id", user.id)
+      .eq("is_archived", showArchived)
       .order("priority", { ascending: false });
 
     if (data) setCompanies(data);
@@ -172,24 +178,26 @@ const Companies = () => {
     const normalize = (name: string) => name.trim().toLowerCase();
     const normalizedCompanyName = normalize(companyName);
 
-    // 1. Contacts with matching company_id
+    // 1. Contacts with matching company_id (exclude archived)
     const { data: byId, error: byIdError } = await supabase
       .from("contacts")
       .select("*")
       .eq("user_id", user.id)
-      .eq("company_id", companyId);
+      .eq("company_id", companyId)
+      .eq("is_archived", false);
 
     if (byIdError) {
       console.error("Error fetching contacts by company_id", byIdError);
     }
 
-    // 2. Contacts with null company_id but matching company name (case-insensitive)
+    // 2. Contacts with null company_id but matching company name (case-insensitive, exclude archived)
     const { data: byName, error: byNameError } = await supabase
       .from("contacts")
       .select("*")
       .eq("user_id", user.id)
       .is("company_id", null)
-      .not("company", "is", null);
+      .not("company", "is", null)
+      .eq("is_archived", false);
 
     if (byNameError) {
       console.error("Error fetching contacts by company name", byNameError);
@@ -258,6 +266,48 @@ const Companies = () => {
     }
   };
 
+  const handleArchiveCompany = async () => {
+    if (!archiveCompanyId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const companyToArchive = companies.find(c => c.id === archiveCompanyId);
+    const isArchiving = !companyToArchive?.is_archived;
+
+    try {
+      const { error } = await supabase
+        .from("companies")
+        .update({ 
+          is_archived: isArchiving,
+          archived_at: isArchiving ? new Date().toISOString() : null
+        })
+        .eq("id", archiveCompanyId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: isArchiving ? "Company archived" : "Company restored",
+        description: isArchiving
+          ? "The company has been archived and hidden from your target list."
+          : "The company has been restored to your active target list.",
+      });
+
+      setArchiveCompanyId(null);
+      setSelectedCompany(null);
+      setCompanyContacts([]);
+      fetchCompanies();
+    } catch (error) {
+      console.error("Failed to archive/restore company:", error);
+      toast({
+        title: "Error",
+        description: `Failed to ${isArchiving ? "archive" : "restore"} company`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const getPriorityBadge = (priority: number) => {
     if (priority >= 3) return <Badge className="bg-red-500">High Priority</Badge>;
     if (priority >= 1) return <Badge className="bg-yellow-500">Medium Priority</Badge>;
@@ -294,11 +344,22 @@ const Companies = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">Target Companies</h1>
           <p className="text-muted-foreground">Companies you want to work at</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-archived-companies"
+              checked={showArchived}
+              onCheckedChange={setShowArchived}
+            />
+            <Label htmlFor="show-archived-companies" className="text-sm cursor-pointer">
+              Show archived
+            </Label>
+          </div>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -359,6 +420,7 @@ const Companies = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {companies.length === 0 ? (
@@ -379,11 +441,14 @@ const Companies = () => {
               className="hover:shadow-md transition-shadow cursor-pointer"
             >
               <CardHeader>
-                <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between">
                   <div className="flex-1" onClick={() => handleCompanyClick(company)}>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Building2 className="h-5 w-5" />
                       {company.name}
+                      {company.is_archived && (
+                        <Badge variant="secondary" className="ml-2">Archived</Badge>
+                      )}
                     </CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
@@ -403,11 +468,28 @@ const Companies = () => {
                       variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setDeleteCompanyId(company.id);
+                        setArchiveCompanyId(company.id);
                       }}
+                      title={company.is_archived ? "Restore company" : "Archive company"}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      {company.is_archived ? (
+                        <ArchiveRestore className="h-4 w-4" />
+                      ) : (
+                        <Archive className="h-4 w-4" />
+                      )}
                     </Button>
+                    {!company.is_archived && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteCompanyId(company.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -543,13 +625,35 @@ const Companies = () => {
         />
       )}
 
+      {/* Archive Company Confirmation Dialog */}
+      <AlertDialog open={!!archiveCompanyId} onOpenChange={(open) => !open && setArchiveCompanyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {companies.find(c => c.id === archiveCompanyId)?.is_archived ? "Restore company?" : "Archive company?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {companies.find(c => c.id === archiveCompanyId)?.is_archived
+                ? "This company will be restored to your active target list and will appear in paths."
+                : "This company will be hidden from your target list and paths. Contacts linked to it will remain in your contact list."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchiveCompany}>
+              {companies.find(c => c.id === archiveCompanyId)?.is_archived ? "Restore company" : "Archive company"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Delete Company Confirmation Dialog */}
       <AlertDialog open={!!deleteCompanyId} onOpenChange={(open) => !open && setDeleteCompanyId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete company?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove this company from your targets. Contacts linked to this company will stay in your contact list but will have their company cleared.
+              This will permanently remove this company from your targets. Contacts linked to this company will stay in your contact list but will have their company cleared.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
