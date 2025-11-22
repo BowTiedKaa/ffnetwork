@@ -34,6 +34,8 @@ interface Contact {
   contact_type: string;
   last_contact_date: string | null;
   warmth_level: string;
+  connector_influence_company_ids: string[] | null;
+  is_archived?: boolean;
 }
 
 interface TodayAction {
@@ -48,6 +50,7 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [streak, setStreak] = useState<Streak | null>(null);
   const [todayActions, setTodayActions] = useState<TodayAction[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [logInteractionOpen, setLogInteractionOpen] = useState(false);
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
@@ -86,9 +89,9 @@ const Dashboard = () => {
           const daysSinceContact = Math.floor((now.getTime() - lastContactDate.getTime()) / (1000 * 60 * 60 * 24));
           
           let newWarmthStatus: string;
-          if (daysSinceContact <= 30) {
+          if (daysSinceContact <= 14) {
             newWarmthStatus = "warm";
-          } else if (daysSinceContact <= 60) {
+          } else if (daysSinceContact <= 30) {
             newWarmthStatus = "cooling";
           } else {
             newWarmthStatus = "cold";
@@ -141,6 +144,7 @@ const Dashboard = () => {
 
       if (tasksResult.data) setTasks(tasksResult.data);
       if (streakResult.data) setStreak(streakResult.data);
+      if (contactsResult.data) setContacts(contactsResult.data as Contact[]);
 
       // Generate today's actions
       const actions: TodayAction[] = [];
@@ -158,7 +162,7 @@ const Dashboard = () => {
         });
       }
 
-      // 2. Prioritize cooling contacts (31-60 days)
+      // 2. Prioritize cooling contacts (15-30 days)
       if (contactsResult.data && actions.length < 3) {
         const coolingContacts = contactsResult.data.filter(
           (contact: Contact) => contact.warmth_level === "cooling"
@@ -180,14 +184,38 @@ const Dashboard = () => {
         });
       }
 
-      // 3. Cold contacts tied to target companies
+      // 3. Connectors with influence at target companies
+      if (companiesResult.data && contactsResult.data && actions.length < 3) {
+        const targetCompanyIds = companiesResult.data.map((c: any) => c.id);
+        const connectorsWithInfluence = contactsResult.data.filter(
+          (contact: Contact) =>
+            contact.contact_type === "connector" &&
+            contact.connector_influence_company_ids &&
+            contact.connector_influence_company_ids.some(id => targetCompanyIds.includes(id))
+        );
+
+        connectorsWithInfluence.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+          const influencedCompany = companiesResult.data?.find((c: any) => 
+            contact.connector_influence_company_ids?.includes(c.id)
+          );
+          
+          actions.push({
+            type: "company_overlap",
+            contact,
+            targetCompany: influencedCompany?.name || contact.company || undefined,
+          });
+        });
+      }
+
+      // 4. Cold contacts tied to target companies
       if (companiesResult.data && contactsResult.data && actions.length < 3) {
         const targetCompanies = companiesResult.data.map((c: any) => c.name.toLowerCase());
         const overlappingContacts = contactsResult.data.filter(
           (contact: Contact) =>
             contact.company &&
             targetCompanies.includes(contact.company.toLowerCase()) &&
-            contact.warmth_level === "cold"
+            contact.warmth_level === "cold" &&
+            !actions.some(a => a.contact.id === contact.id)
         );
 
         overlappingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
@@ -199,26 +227,35 @@ const Dashboard = () => {
         });
       }
 
-      // 4. Fill remaining with other cold contacts
+      // 5. Contacts with no recent interactions
       if (contactsResult.data && actions.length < 3) {
-        const coldContacts = contactsResult.data.filter(
+        const noRecentInteractions = contactsResult.data.filter(
           (contact: Contact) =>
-            contact.warmth_level === "cold" &&
+            !contact.last_contact_date &&
             !actions.some(a => a.contact.id === contact.id)
         );
         
-        coldContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
-          const daysAgo = contact.last_contact_date
-            ? Math.floor(
-                (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
-                  (1000 * 60 * 60 * 24)
-              )
-            : null;
-          
+        noRecentInteractions.slice(0, 3 - actions.length).forEach((contact: Contact) => {
           actions.push({
             type: "cold_contact",
             contact,
-            daysAgo: daysAgo || undefined,
+            daysAgo: undefined,
+          });
+        });
+      }
+
+      // 6. Reliable recruiters
+      if (contactsResult.data && actions.length < 3) {
+        const reliableRecruiters = contactsResult.data.filter(
+          (contact: Contact) =>
+            contact.contact_type === "reliable_recruiter" &&
+            !actions.some(a => a.contact.id === contact.id)
+        );
+        
+        reliableRecruiters.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+          actions.push({
+            type: "cold_contact",
+            contact,
           });
         });
       }
@@ -364,23 +401,62 @@ const Dashboard = () => {
   };
 
   const getActionMessage = (action: TodayAction) => {
+    const { contact } = action;
+    
     switch (action.type) {
       case "follow_up":
         return "Follow up today";
       case "cold_contact":
+        if (contact.warmth_level === "cooling") {
+          return action.daysAgo
+            ? `Cooling - last contact ${action.daysAgo} days ago`
+            : "Cooling - reconnect soon";
+        }
+        if (contact.contact_type === "reliable_recruiter") {
+          return "Check in for new opportunities";
+        }
         return action.daysAgo
           ? `Reconnect (last interaction ${action.daysAgo} days ago)`
           : "Reach out (no interaction logged)";
       case "company_overlap":
-        return `Reach out about ${action.targetCompany}`;
+        if (contact.contact_type === "connector") {
+          return `Warm path into ${action.targetCompany}`;
+        }
+        return `Works at ${action.targetCompany}`;
       default:
         return "";
     }
   };
 
+  const calculateNetworkStrength = () => {
+    if (!streak || contacts.length === 0) return 0;
+
+    // Warm contacts (0-40 points)
+    const warmContacts = contacts.filter(c => c.warmth_level === "warm" && !c.is_archived).length;
+    const warmScore = Math.min(40, (warmContacts / 10) * 40);
+
+    // Recent interactions last 30 days (0-20 points)
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentInteractions = contacts.filter(c => 
+      c.last_contact_date && new Date(c.last_contact_date) >= thirtyDaysAgo
+    ).length;
+    const recentScore = Math.min(20, (recentInteractions / 10) * 20);
+
+    // Streak length (0-20 points)
+    const streakScore = Math.min(20, (streak.current_streak / 30) * 20);
+
+    // Weekly completed tasks (0-20 points)
+    const weeklyScore = Math.min(20, (streak.total_tasks_completed / 100) * 20);
+
+    return Math.round(warmScore + recentScore + streakScore + weeklyScore);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
+
+  const networkStrength = calculateNetworkStrength();
 
   return (
     <div className="space-y-6">
@@ -388,6 +464,29 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
         <p className="text-muted-foreground">Your daily networking goals</p>
       </div>
+
+      {/* Network Strength Score */}
+      <Card className="bg-gradient-to-br from-primary/10 to-accent/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Network Strength
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-3">
+            <div className="text-5xl font-bold">{networkStrength}</div>
+            <div className="text-muted-foreground pb-2">/100</div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            {networkStrength >= 80 && "Exceptional momentum — Keep building!"}
+            {networkStrength >= 60 && networkStrength < 80 && "Strong network — You're on track!"}
+            {networkStrength >= 40 && networkStrength < 60 && "Growing steadily — Keep it up!"}
+            {networkStrength >= 20 && networkStrength < 40 && "Building momentum — Stay consistent!"}
+            {networkStrength < 20 && "Start small — Every connection counts!"}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Today's Actions Section */}
       <Card>

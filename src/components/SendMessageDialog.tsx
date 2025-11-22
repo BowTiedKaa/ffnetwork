@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,7 +67,12 @@ Best,
     }
   };
 
-  const [message, setMessage] = useState(getMessageTemplate());
+  const [message, setMessage] = useState("");
+
+  // Regenerate message whenever contact props change
+  useEffect(() => {
+    setMessage(getMessageTemplate());
+  }, [contactName, companyName, contactType, targetRole]);
 
   const handleCopy = async () => {
     try {
