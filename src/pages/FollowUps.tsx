@@ -60,7 +60,8 @@ const FollowUps = () => {
     const { data } = await supabase
       .from("contacts")
       .select("id, name, company")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("is_archived", false);
 
     if (data) setContacts(data);
   };

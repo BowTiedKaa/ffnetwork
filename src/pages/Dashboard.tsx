@@ -68,11 +68,12 @@ const Dashboard = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
 
-      // First, fetch all contacts and update their warmth status
+      // First, fetch all contacts and update their warmth status (exclude archived)
       const { data: allContacts } = await supabase
         .from("contacts")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("is_archived", false);
 
       // Calculate and update warmth status for each contact
       if (allContacts) {
@@ -128,11 +129,13 @@ const Dashboard = () => {
         supabase
           .from("contacts")
           .select("*")
-          .eq("user_id", user.id),
+          .eq("user_id", user.id)
+          .eq("is_archived", false),
         supabase
           .from("companies")
           .select("name")
-          .eq("user_id", user.id),
+          .eq("user_id", user.id)
+          .eq("is_archived", false),
       ]);
 
       if (tasksResult.data) setTasks(tasksResult.data);
@@ -244,11 +247,12 @@ const Dashboard = () => {
         return; // Nothing to backfill
       }
 
-      // Fetch all user's companies for matching
+      // Fetch all user's companies for matching (exclude archived)
       const { data: companies } = await supabase
         .from("companies")
         .select("id, name")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("is_archived", false);
 
       if (!companies) return;
 

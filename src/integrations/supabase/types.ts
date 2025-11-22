@@ -16,9 +16,11 @@ export type Database = {
     Tables: {
       companies: {
         Row: {
+          archived_at: string | null
           created_at: string | null
           id: string
           industry: string | null
+          is_archived: boolean | null
           name: string
           notes: string | null
           priority: number | null
@@ -26,9 +28,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string | null
           id?: string
           industry?: string | null
+          is_archived?: boolean | null
           name: string
           notes?: string | null
           priority?: number | null
@@ -36,9 +40,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string | null
           id?: string
           industry?: string | null
+          is_archived?: boolean | null
           name?: string
           notes?: string | null
           priority?: number | null
@@ -49,12 +55,14 @@ export type Database = {
       }
       contacts: {
         Row: {
+          archived_at: string | null
           company: string | null
           company_id: string | null
           contact_type: string
           created_at: string | null
           email: string | null
           id: string
+          is_archived: boolean | null
           last_contact_date: string | null
           linkedin_url: string | null
           name: string
@@ -64,12 +72,14 @@ export type Database = {
           warmth_level: string | null
         }
         Insert: {
+          archived_at?: string | null
           company?: string | null
           company_id?: string | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
           id?: string
+          is_archived?: boolean | null
           last_contact_date?: string | null
           linkedin_url?: string | null
           name: string
@@ -79,12 +89,14 @@ export type Database = {
           warmth_level?: string | null
         }
         Update: {
+          archived_at?: string | null
           company?: string | null
           company_id?: string | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
           id?: string
+          is_archived?: boolean | null
           last_contact_date?: string | null
           linkedin_url?: string | null
           name?: string
