@@ -28,7 +28,7 @@ const contactSchema = z.object({
   role: z.string().trim().max(100, "Role must be less than 100 characters").optional(),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
   warmth_level: z.enum(["warm", "cooling", "cold"]),
-  contact_type: z.enum(["connector", "trailblazer"]),
+  contact_type: z.enum(["connector", "trailblazer", "reliable_recruiter", "unspecified"]),
 });
 
 interface Contact {
@@ -69,7 +69,7 @@ const Contacts = () => {
     role: "",
     warmth_level: "cold",
     notes: "",
-    contact_type: "connector" as "connector" | "trailblazer",
+    contact_type: "unspecified" as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
   });
   const { toast } = useToast();
 
@@ -106,7 +106,7 @@ const Contacts = () => {
     if (data) setCompanies(data);
   };
 
-  const handleContactTypeSelect = (type: "connector" | "trailblazer") => {
+  const handleContactTypeSelect = (type: "connector" | "trailblazer" | "reliable_recruiter" | "unspecified") => {
     setFormData({ ...formData, contact_type: type });
     setContactTypeStep(false);
   };
@@ -179,7 +179,7 @@ const Contacts = () => {
 
       setIsOpen(false);
       setContactTypeStep(true);
-      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "connector" });
+      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified" });
       fetchContacts();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -291,7 +291,7 @@ const Contacts = () => {
     setIsOpen(open);
     if (!open) {
       setContactTypeStep(true);
-      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "connector" });
+      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified" });
     }
   };
 
@@ -318,18 +318,38 @@ const Contacts = () => {
   };
 
   const getContactTypeInfo = (type: string) => {
-    if (type === "connector") {
-      return {
-        icon: Users,
-        label: "Connector",
-        className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-      };
+    switch (type) {
+      case "connector":
+        return {
+          icon: Users,
+          label: "Connector",
+          className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+        };
+      case "trailblazer":
+        return {
+          icon: TrendingUp,
+          label: "Trailblazer",
+          className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+        };
+      case "reliable_recruiter":
+        return {
+          icon: Briefcase,
+          label: "Reliable Recruiter",
+          className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+        };
+      case "unspecified":
+        return {
+          icon: Users,
+          label: "Unspecified",
+          className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+        };
+      default:
+        return {
+          icon: Users,
+          label: "Unspecified",
+          className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+        };
     }
-    return {
-      icon: TrendingUp,
-      label: "Trailblazer",
-      className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-    };
   };
 
   return (
@@ -364,7 +384,7 @@ const Contacts = () => {
             
             {contactTypeStep ? (
               <div className="space-y-4 py-4">
-                <RadioGroup onValueChange={(value) => handleContactTypeSelect(value as "connector" | "trailblazer")}>
+                <RadioGroup onValueChange={(value) => handleContactTypeSelect(value as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified")}>
                   <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
                     <RadioGroupItem value="connector" id="connector" />
                     <div className="flex-1">
@@ -372,7 +392,7 @@ const Contacts = () => {
                         Connector
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Senior people, former colleagues, mentors, or trusted contacts who can provide warm introductions
+                        Senior people, ex-colleagues, or mentors who can open doors and do warm introductions.
                       </p>
                     </div>
                   </div>
@@ -383,7 +403,29 @@ const Contacts = () => {
                         Trailblazer
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        People with government/public-sector background who transitioned to roles you want
+                        Someone with a government/public background who already transitioned into the kind of role I want.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                    <RadioGroupItem value="reliable_recruiter" id="reliable_recruiter" />
+                    <div className="flex-1">
+                      <Label htmlFor="reliable_recruiter" className="cursor-pointer font-semibold">
+                        Reliable Recruiter
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Recruiters who consistently share relevant roles, give honest feedback, and have a track record of actually placing people in good roles.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                    <RadioGroupItem value="unspecified" id="unspecified" />
+                    <div className="flex-1">
+                      <Label htmlFor="unspecified" className="cursor-pointer font-semibold">
+                        Unspecified
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        A contact who's relevant but not yet categorized.
                       </p>
                     </div>
                   </div>

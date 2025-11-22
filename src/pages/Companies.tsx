@@ -580,15 +580,27 @@ const Companies = () => {
                                 <Card key={contact.id} className="p-4">
                                   <div className="flex items-start justify-between">
                                     <div className="space-y-1 flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium">{contact.name}</p>
-                                        <Badge variant="outline" className="text-xs">
-                                          {contact.contact_type}
-                                        </Badge>
-                                        <Badge className={`${getWarmthColor(contact.warmth_level)} text-xs`}>
-                                          {contact.warmth_level || "unknown"}
-                                        </Badge>
-                                      </div>
+                                       <div className="flex items-center gap-2">
+                                         <p className="font-medium">{contact.name}</p>
+                                         <Badge variant="outline" className={
+                                           contact.contact_type === "connector"
+                                             ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs"
+                                             : contact.contact_type === "trailblazer"
+                                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
+                                             : contact.contact_type === "reliable_recruiter"
+                                             ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
+                                             : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 text-xs"
+                                         }>
+                                           {contact.contact_type === "connector" && "Connector"}
+                                           {contact.contact_type === "trailblazer" && "Trailblazer"}
+                                           {contact.contact_type === "reliable_recruiter" && "Reliable Recruiter"}
+                                           {contact.contact_type === "unspecified" && "Unspecified"}
+                                           {!["connector", "trailblazer", "reliable_recruiter", "unspecified"].includes(contact.contact_type) && "Unspecified"}
+                                         </Badge>
+                                         <Badge className={`${getWarmthColor(contact.warmth_level)} text-xs`}>
+                                           {contact.warmth_level || "unknown"}
+                                         </Badge>
+                                       </div>
                                       {contact.role && (
                                         <p className="text-sm text-muted-foreground">{contact.role}</p>
                                       )}
