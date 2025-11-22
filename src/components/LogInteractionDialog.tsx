@@ -49,7 +49,7 @@ export const LogInteractionDialog = ({
     }
 
     try {
-      // Create interaction record
+      // Insert interaction
       const { error: interactionError } = await supabase.from("interactions").insert({
         user_id: user.id,
         contact_id: contactId,
@@ -64,34 +64,23 @@ export const LogInteractionDialog = ({
       const { error: contactError } = await supabase
         .from("contacts")
         .update({ last_contact_date: format(date, "yyyy-MM-dd") })
-        .eq("id", contactId);
+        .eq("id", contactId)
+        .eq("user_id", user.id);
 
       if (contactError) throw contactError;
 
-      // Calculate and update warmth status
-      const daysSince = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-      let warmthLevel = "cold";
-      if (daysSince <= 30) warmthLevel = "warm";
-      else if (daysSince <= 60) warmthLevel = "cooling";
-
-      const { error: warmthError } = await supabase
-        .from("contacts")
-        .update({ warmth_level: warmthLevel })
-        .eq("id", contactId);
-
-      if (warmthError) throw warmthError;
-
       toast({
-        title: "Success!",
-        description: "Interaction logged and warmth updated",
+        title: "Interaction logged!",
+        description: "Keep building momentum — your network is getting stronger! 🚀",
       });
 
       setNotes("");
       setInteractionType("email");
       setDate(new Date());
-      onOpenChange(false);
       onSuccess();
+      onOpenChange(false);
     } catch (error) {
+      console.error("Error logging interaction:", error);
       toast({
         title: "Error",
         description: "Failed to log interaction",
@@ -102,9 +91,17 @@ export const LogInteractionDialog = ({
     }
   };
 
+  // Handle Enter key submission (Cmd/Ctrl + Enter)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit(e as any);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>Log Interaction with {contactName}</DialogTitle>
         </DialogHeader>
@@ -124,58 +121,56 @@ export const LogInteractionDialog = ({
                   {date ? format(date, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-background border z-50" align="start">
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={(date) => date && setDate(date)}
+                  onSelect={(newDate) => newDate && setDate(newDate)}
                   initialFocus
-                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
           </div>
 
           <div className="space-y-2">
-            <Label>Interaction Type</Label>
+            <Label htmlFor="interactionType">Interaction Type</Label>
             <Select value={interactionType} onValueChange={setInteractionType}>
-              <SelectTrigger>
+              <SelectTrigger id="interactionType">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border z-50">
                 <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="call">Call</SelectItem>
-                <SelectItem value="message">Message</SelectItem>
-                <SelectItem value="meeting">Meeting</SelectItem>
-                <SelectItem value="intro_attempt">Intro Attempt</SelectItem>
+                <SelectItem value="phone">Phone Call</SelectItem>
+                <SelectItem value="coffee">Coffee/Lunch</SelectItem>
+                <SelectItem value="linkedin">LinkedIn Message</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">Notes (optional)</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={4}
+              rows={3}
               placeholder="What did you discuss?"
             />
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? "Logging..." : "Log Interaction"}
             </Button>
           </div>
+          
+          <p className="text-xs text-muted-foreground text-center">
+            Tip: Press Cmd+Enter (Mac) or Ctrl+Enter (Windows) to submit
+          </p>
         </form>
       </DialogContent>
     </Dialog>

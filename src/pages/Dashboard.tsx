@@ -9,6 +9,11 @@ import { Flame, Target, TrendingUp, Users, TrendingUp as TrailblazerIcon, Calend
 import { formatDistanceToNow } from "date-fns";
 import { LogInteractionDialog } from "@/components/LogInteractionDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
+import { OnboardingWizard } from "@/components/OnboardingWizard";
+import { NetworkHeatmap } from "@/components/NetworkHeatmap";
+import { WeeklySummary } from "@/components/WeeklySummary";
+import { BadgeSystem } from "@/components/BadgeSystem";
+import { OfferMomentumMeter } from "@/components/OfferMomentumMeter";
 
 interface DailyTask {
   id: string;
@@ -36,6 +41,7 @@ interface Contact {
   warmth_level: string;
   connector_influence_company_ids: string[] | null;
   is_archived?: boolean;
+  created_at?: string;
 }
 
 interface TodayAction {
@@ -51,10 +57,14 @@ const Dashboard = () => {
   const [streak, setStreak] = useState<Streak | null>(null);
   const [todayActions, setTodayActions] = useState<TodayAction[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [interactions, setInteractions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [logInteractionOpen, setLogInteractionOpen] = useState(false);
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [previousNetworkStrength, setPreviousNetworkStrength] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -112,7 +122,7 @@ const Dashboard = () => {
       }
 
       // Now fetch all data including updated contacts
-      const [tasksResult, streakResult, followUpsResult, contactsResult, companiesResult] = await Promise.all([
+      const [tasksResult, streakResult, followUpsResult, contactsResult, companiesResult, interactionsResult] = await Promise.all([
         supabase
           .from("daily_tasks")
           .select("*")
@@ -137,14 +147,26 @@ const Dashboard = () => {
           .eq("is_archived", false),
         supabase
           .from("companies")
-          .select("name")
+          .select("*")
           .eq("user_id", user.id)
           .eq("is_archived", false),
+        supabase
+          .from("interactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("interaction_date", { ascending: false }),
       ]);
 
       if (tasksResult.data) setTasks(tasksResult.data);
       if (streakResult.data) setStreak(streakResult.data);
       if (contactsResult.data) setContacts(contactsResult.data as Contact[]);
+      if (companiesResult.data) setCompanies(companiesResult.data);
+      if (interactionsResult.data) setInteractions(interactionsResult.data);
+
+      // Check if user needs onboarding
+      if (contactsResult.data?.length === 0 && companiesResult.data?.length === 0) {
+        setShowOnboarding(true);
+      }
 
       // Generate today's actions
       const actions: TodayAction[] = [];
@@ -378,8 +400,26 @@ const Dashboard = () => {
 
         toast({
           title: "Task completed!",
-          description: "Great job keeping your streak alive! 🔥",
+          description: "Interaction logged — keep building momentum! 🔥",
         });
+
+        // Check for new badges
+        const newStreak = streak?.current_streak || 0;
+        if (newStreak === 3) {
+          setTimeout(() => {
+            toast({
+              title: "🎉 New Badge Earned!",
+              description: "3 Days in a Row — You're on fire!",
+            });
+          }, 1000);
+        } else if (newStreak === 7) {
+          setTimeout(() => {
+            toast({
+              title: "🎉 New Badge Earned!",
+              description: "Week Warrior — 7 days strong!",
+            });
+          }, 1000);
+        }
       }
     } catch (error) {
       toast({
@@ -452,41 +492,136 @@ const Dashboard = () => {
     return Math.round(warmScore + recentScore + streakScore + weeklyScore);
   };
 
+  const calculateOfferMomentum = () => {
+    const networkStrength = calculateNetworkStrength();
+    
+    // Warm paths to target companies (0-30 points)
+    const warmContactsAtTargets = contacts.filter(c => 
+      c.warmth_level === "warm" && 
+      companies.some(comp => comp.name.toLowerCase() === c.company?.toLowerCase())
+    ).length;
+    const pathsScore = Math.min(30, (warmContactsAtTargets / 5) * 30);
+
+    // Recent interactions last 7 days (0-30 points)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const weeklyInteractions = interactions.filter(i => 
+      new Date(i.interaction_date) >= sevenDaysAgo
+    ).length;
+    const weeklyScore = Math.min(30, (weeklyInteractions / 5) * 30);
+
+    // Streak strength (0-10 points)
+    const streakBonus = Math.min(10, ((streak?.current_streak || 0) / 7) * 10);
+
+    return Math.min(100, Math.round((networkStrength * 0.4) + pathsScore + weeklyScore + streakBonus));
+  };
+
+  const getWeeklyStats = () => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    const interactionsThisWeek = interactions.filter(i => 
+      new Date(i.interaction_date) >= sevenDaysAgo
+    ).length;
+
+    const warmContacts = contacts.filter(c => c.warmth_level === "warm").length;
+    
+    const coolingSaved = interactions.filter(i => {
+      const date = new Date(i.interaction_date);
+      const contact = contacts.find(c => c.id === i.contact_id);
+      return date >= sevenDaysAgo && contact?.warmth_level === "warm";
+    }).length;
+
+    const newPaths = contacts.filter(c => {
+      const created = new Date(c.created_at || 0);
+      return created >= sevenDaysAgo && c.company;
+    }).length;
+
+    const currentStrength = calculateNetworkStrength();
+    const strengthChange = currentStrength - previousNetworkStrength;
+
+    return {
+      interactionsThisWeek,
+      warmContacts,
+      coolingSaved,
+      newPaths,
+      networkStrengthChange: strengthChange,
+      currentStreak: streak?.current_streak || 0,
+    };
+  };
+
+  const getCompaniesWithWarmPaths = () => {
+    return companies.filter(company => {
+      return contacts.some(c => 
+        c.warmth_level === "warm" && 
+        c.company?.toLowerCase() === company.name.toLowerCase()
+      );
+    }).length;
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
 
   const networkStrength = calculateNetworkStrength();
+  const offerMomentum = calculateOfferMomentum();
+  const weeklyStats = getWeeklyStats();
+  const companiesWithWarmPaths = getCompaniesWithWarmPaths();
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    fetchDashboardData();
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Your daily networking goals</p>
+    <>
+      <OnboardingWizard open={showOnboarding} onComplete={handleOnboardingComplete} />
+      
+      <div className="space-y-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+            <p className="text-muted-foreground">Your daily networking goals</p>
+          </div>
+          <div className="w-64">
+            <OfferMomentumMeter score={offerMomentum} />
+          </div>
+        </div>
+
+        {/* Network Strength Score */}
+        <Card className="bg-gradient-to-br from-primary/10 to-accent/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Network Strength
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-3">
+              <div className="text-5xl font-bold">{networkStrength}</div>
+              <div className="text-muted-foreground pb-2">/100</div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {networkStrength >= 80 && "Exceptional momentum — Keep building!"}
+              {networkStrength >= 60 && networkStrength < 80 && "Strong network — You're on track!"}
+              {networkStrength >= 40 && networkStrength < 60 && "Growing steadily — Keep it up!"}
+              {networkStrength >= 20 && networkStrength < 40 && "Building momentum — Stay consistent!"}
+              {networkStrength < 20 && "Start small — Every connection counts!"}
+            </p>
+          </CardContent>
+        </Card>
+
+      {/* Weekly Summary and Heatmap Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <WeeklySummary {...weeklyStats} />
+        <BadgeSystem
+          streak={streak?.current_streak || 0}
+          totalInteractions={interactions.length}
+          warmContacts={contacts.filter(c => c.warmth_level === "warm").length}
+          companiesWithWarmPaths={companiesWithWarmPaths}
+        />
       </div>
 
-      {/* Network Strength Score */}
-      <Card className="bg-gradient-to-br from-primary/10 to-accent/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Network Strength
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-3">
-            <div className="text-5xl font-bold">{networkStrength}</div>
-            <div className="text-muted-foreground pb-2">/100</div>
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            {networkStrength >= 80 && "Exceptional momentum — Keep building!"}
-            {networkStrength >= 60 && networkStrength < 80 && "Strong network — You're on track!"}
-            {networkStrength >= 40 && networkStrength < 60 && "Growing steadily — Keep it up!"}
-            {networkStrength >= 20 && networkStrength < 40 && "Building momentum — Stay consistent!"}
-            {networkStrength < 20 && "Start small — Every connection counts!"}
-          </p>
-        </CardContent>
-      </Card>
+      {/* Network Heatmap */}
+      <NetworkHeatmap contacts={contacts} />
 
       {/* Today's Actions Section */}
       <Card>
@@ -498,8 +633,16 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent>
           {todayActions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>You're in good shape today. Add a new contact or check your target companies.</p>
+            <div className="text-center py-8 space-y-4">
+              <p className="text-muted-foreground">You're in good shape today!</p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p><strong>What to do next:</strong></p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Check your target companies for new paths</li>
+                  <li>Add a new contact to expand your network</li>
+                  <li>Review cooling contacts and plan reconnections</li>
+                </ul>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -690,18 +833,22 @@ const Dashboard = () => {
               setSelectedContact(null);
             }}
           />
-          <SendMessageDialog
-            open={sendMessageOpen}
-            onOpenChange={setSendMessageOpen}
-            contactName={selectedContact.name}
-            contactEmail={selectedContact.email}
-            companyName={selectedContact.company}
-            contactType={selectedContact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified" | null}
-            targetRole={selectedContact.role}
-          />
         </>
       )}
-    </div>
+
+      {selectedContact && (
+        <SendMessageDialog
+          open={sendMessageOpen}
+          onOpenChange={setSendMessageOpen}
+          contactName={selectedContact.name}
+          contactEmail={selectedContact.email}
+          companyName={selectedContact.company}
+          contactType={selectedContact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified" | null}
+          targetRole={selectedContact.role}
+        />
+      )}
+      </div>
+    </>
   );
 };
 

@@ -578,10 +578,10 @@ const Contacts = () => {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warm">Warm - Recent contact (last 30 days)</SelectItem>
-                    <SelectItem value="cooling">Cooling - Contact 31-60 days ago</SelectItem>
-                    <SelectItem value="cold">Cold - No contact in 60+ days</SelectItem>
+                  <SelectContent className="bg-background border z-50">
+                    <SelectItem value="warm">Warm - Recent contact (last 14 days)</SelectItem>
+                    <SelectItem value="cooling">Cooling - Contact 15-30 days ago</SelectItem>
+                    <SelectItem value="cold">Cold - No contact in 30+ days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -644,7 +644,7 @@ const Contacts = () => {
                     <SelectTrigger id="recruiter_specialization">
                       <SelectValue placeholder="Select specialization" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border z-50">
                       <SelectItem value="industry_knowledge">Industry knowledge</SelectItem>
                       <SelectItem value="interview_prep">Interview prep</SelectItem>
                       <SelectItem value="offer_negotiation">Offer negotiation</SelectItem>
