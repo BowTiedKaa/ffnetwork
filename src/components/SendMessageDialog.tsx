@@ -11,6 +11,8 @@ interface SendMessageDialogProps {
   contactName: string;
   contactEmail?: string | null;
   companyName?: string | null;
+  contactType?: "connector" | "trailblazer" | "reliable_recruiter" | "unspecified" | null;
+  targetRole?: string | null;
 }
 
 export const SendMessageDialog = ({
@@ -19,15 +21,53 @@ export const SendMessageDialog = ({
   contactName,
   contactEmail,
   companyName,
+  contactType = "unspecified",
+  targetRole,
 }: SendMessageDialogProps) => {
   const { toast } = useToast();
-  const messageTemplate = `Hi ${contactName},
+  
+  const getMessageTemplate = () => {
+    const firstName = contactName.split(" ")[0];
+    const company = companyName || "[company]";
+    const roleTeam = targetRole || "[role/team]";
+    const specificDate = "[specific date]";
+    
+    switch (contactType) {
+      case "connector":
+        return `Hi ${firstName},
 
-I've been thinking more about opportunities at ${companyName || "your company"} and would value your perspective. Do you have a few minutes sometime this week to catch up?
+Do you have 15–20 minutes on ${specificDate}? I'd like to talk through the ${roleTeam} at ${company} and get your perspective on whether it's a strong fit. Your read on the people involved would be helpful.
 
-Best regards`;
+Best,
+[YourName]`;
+      
+      case "trailblazer":
+        return `Hi ${firstName},
 
-  const [message, setMessage] = useState(messageTemplate);
+Do you have 15–20 minutes on ${specificDate}? I'm looking at the ${roleTeam} at ${company} and wanted to hear how you handled your own transition and what you'd focus on early in the process.
+
+Best,
+[YourName]`;
+      
+      case "reliable_recruiter":
+        return `Hi ${firstName},
+
+Are you available for 15–20 minutes on ${specificDate}? I'm preparing for the ${roleTeam} at ${company} and wanted your perspective on how this team evaluates candidates and where people tend to get stuck.
+
+Best,
+[YourName]`;
+      
+      default: // unspecified or null
+        return `Hi ${firstName},
+
+Do you have 15–20 minutes on ${specificDate}? I'm exploring the ${roleTeam} at ${company} and would value your perspective.
+
+Best,
+[YourName]`;
+    }
+  };
+
+  const [message, setMessage] = useState(getMessageTemplate());
 
   const handleCopy = async () => {
     try {

@@ -24,6 +24,22 @@ const contactSchema = z.object({
   contact_type: z.enum(["connector", "trailblazer", "reliable_recruiter", "unspecified"]),
 });
 
+interface Contact {
+  id: string;
+  name: string;
+  email: string | null;
+  role: string | null;
+  company: string | null;
+  company_id: string | null;
+  linkedin_url: string | null;
+  notes: string | null;
+  warmth_level: string;
+  last_contact_date: string | null;
+  contact_type: "connector" | "trailblazer" | "reliable_recruiter" | "unspecified";
+  connector_influence_company_ids: string[] | null;
+  recruiter_specialization: "industry_knowledge" | "interview_prep" | "offer_negotiation" | null;
+}
+
 interface Company {
   id: string;
   name: string;
@@ -53,6 +69,8 @@ export const EditContactDialog = ({
     warmth_level: "cold",
     notes: "",
     contact_type: "unspecified" as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
+    connector_influence_company_ids: [] as string[],
+    recruiter_specialization: null as "industry_knowledge" | "interview_prep" | "offer_negotiation" | null,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +101,8 @@ export const EditContactDialog = ({
         warmth_level: (data.warmth_level || "cold") as "warm" | "cooling" | "cold",
         notes: data.notes || "",
         contact_type: (data.contact_type || "unspecified") as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
+        connector_influence_company_ids: data.connector_influence_company_ids || [],
+        recruiter_specialization: (data.recruiter_specialization as "industry_knowledge" | "interview_prep" | "offer_negotiation") || null,
       });
     }
     setIsLoading(false);
@@ -153,6 +173,8 @@ export const EditContactDialog = ({
           warmth_level: validatedData.warmth_level,
           notes: validatedData.notes || null,
           contact_type: validatedData.contact_type,
+          connector_influence_company_ids: validatedData.contact_type === "connector" ? formData.connector_influence_company_ids : null,
+          recruiter_specialization: validatedData.contact_type === "reliable_recruiter" ? formData.recruiter_specialization : null,
         })
         .eq("id", contactId);
 
@@ -398,6 +420,64 @@ export const EditContactDialog = ({
               </SelectContent>
             </Select>
           </div>
+
+          {formData.contact_type === "connector" && (
+            <div className="space-y-2">
+              <Label>Which companies does this connector have real influence with?</Label>
+              <div className="border rounded-md p-2 space-y-2 max-h-40 overflow-y-auto">
+                {companies.map((company) => (
+                  <div key={company.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`edit-company-${company.id}`}
+                      checked={formData.connector_influence_company_ids.includes(company.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            connector_influence_company_ids: [...formData.connector_influence_company_ids, company.id]
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            connector_influence_company_ids: formData.connector_influence_company_ids.filter(id => id !== company.id)
+                          });
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor={`edit-company-${company.id}`} className="cursor-pointer font-normal">
+                      {company.name}
+                    </Label>
+                  </div>
+                ))}
+                {companies.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No companies available. Add a company first.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {formData.contact_type === "reliable_recruiter" && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-recruiter-specialization">Recruiter specialization</Label>
+              <Select
+                value={formData.recruiter_specialization || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, recruiter_specialization: value as "industry_knowledge" | "interview_prep" | "offer_negotiation" })
+                }
+              >
+                <SelectTrigger id="edit-recruiter-specialization">
+                  <SelectValue placeholder="Select specialization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="industry_knowledge">Industry knowledge</SelectItem>
+                  <SelectItem value="interview_prep">Interview prep</SelectItem>
+                  <SelectItem value="offer_negotiation">Offer negotiation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="warmth">Relationship Warmth</Label>

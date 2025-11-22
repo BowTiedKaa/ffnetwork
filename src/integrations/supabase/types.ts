@@ -58,6 +58,7 @@ export type Database = {
           archived_at: string | null
           company: string | null
           company_id: string | null
+          connector_influence_company_ids: string[] | null
           contact_type: string
           created_at: string | null
           email: string | null
@@ -67,6 +68,7 @@ export type Database = {
           linkedin_url: string | null
           name: string
           notes: string | null
+          recruiter_specialization: string | null
           role: string | null
           user_id: string
           warmth_level: string | null
@@ -75,6 +77,7 @@ export type Database = {
           archived_at?: string | null
           company?: string | null
           company_id?: string | null
+          connector_influence_company_ids?: string[] | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
@@ -84,6 +87,7 @@ export type Database = {
           linkedin_url?: string | null
           name: string
           notes?: string | null
+          recruiter_specialization?: string | null
           role?: string | null
           user_id: string
           warmth_level?: string | null
@@ -92,6 +96,7 @@ export type Database = {
           archived_at?: string | null
           company?: string | null
           company_id?: string | null
+          connector_influence_company_ids?: string[] | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
@@ -101,6 +106,7 @@ export type Database = {
           linkedin_url?: string | null
           name?: string
           notes?: string | null
+          recruiter_specialization?: string | null
           role?: string | null
           user_id?: string
           warmth_level?: string | null

@@ -44,6 +44,8 @@ interface Contact {
   contact_type: string;
   is_archived: boolean;
   archived_at: string | null;
+  connector_influence_company_ids: string[] | null;
+  recruiter_specialization: "industry_knowledge" | "interview_prep" | "offer_negotiation" | null;
 }
 
 interface Company {
@@ -70,6 +72,8 @@ const Contacts = () => {
     warmth_level: "cold",
     notes: "",
     contact_type: "unspecified" as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
+    connector_influence_company_ids: [] as string[],
+    recruiter_specialization: null as "industry_knowledge" | "interview_prep" | "offer_negotiation" | null,
   });
   const { toast } = useToast();
 
@@ -89,7 +93,14 @@ const Contacts = () => {
       .eq("is_archived", showArchived)
       .order("created_at", { ascending: false });
 
-    if (data) setContacts(data);
+    if (data) {
+      const typedContacts: Contact[] = data.map(contact => ({
+        ...contact,
+        contact_type: contact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
+        recruiter_specialization: contact.recruiter_specialization as "industry_knowledge" | "interview_prep" | "offer_negotiation" | null,
+      }));
+      setContacts(typedContacts);
+    }
     // Error silently handled - user will see empty state
   };
 
@@ -161,6 +172,8 @@ const Contacts = () => {
         warmth_level: validatedData.warmth_level,
         notes: validatedData.notes || null,
         contact_type: validatedData.contact_type,
+        connector_influence_company_ids: validatedData.contact_type === "connector" ? formData.connector_influence_company_ids : null,
+        recruiter_specialization: validatedData.contact_type === "reliable_recruiter" ? formData.recruiter_specialization : null,
       });
 
       if (error) {
@@ -179,7 +192,7 @@ const Contacts = () => {
 
       setIsOpen(false);
       setContactTypeStep(true);
-      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified" });
+      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified", connector_influence_company_ids: [], recruiter_specialization: null });
       fetchContacts();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -291,7 +304,7 @@ const Contacts = () => {
     setIsOpen(open);
     if (!open) {
       setContactTypeStep(true);
-      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified" });
+      setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified", connector_influence_company_ids: [], recruiter_specialization: null });
     }
   };
 
@@ -549,6 +562,65 @@ const Contacts = () => {
                   rows={3}
                 />
               </div>
+
+              {formData.contact_type === "connector" && (
+                <div className="space-y-2">
+                  <Label>Which companies does this connector have real influence with?</Label>
+                  <div className="border rounded-md p-2 space-y-2 max-h-40 overflow-y-auto">
+                    {companies.map((company) => (
+                      <div key={company.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`company-${company.id}`}
+                          checked={formData.connector_influence_company_ids.includes(company.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                connector_influence_company_ids: [...formData.connector_influence_company_ids, company.id]
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                connector_influence_company_ids: formData.connector_influence_company_ids.filter(id => id !== company.id)
+                              });
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <Label htmlFor={`company-${company.id}`} className="cursor-pointer font-normal">
+                          {company.name}
+                        </Label>
+                      </div>
+                    ))}
+                    {companies.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No companies available. Add a company first.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {formData.contact_type === "reliable_recruiter" && (
+                <div className="space-y-2">
+                  <Label htmlFor="recruiter_specialization">Recruiter specialization</Label>
+                  <Select
+                    value={formData.recruiter_specialization || ""}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, recruiter_specialization: value as "industry_knowledge" | "interview_prep" | "offer_negotiation" })
+                    }
+                  >
+                    <SelectTrigger id="recruiter_specialization">
+                      <SelectValue placeholder="Select specialization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="industry_knowledge">Industry knowledge</SelectItem>
+                      <SelectItem value="interview_prep">Interview prep</SelectItem>
+                      <SelectItem value="offer_negotiation">Offer negotiation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setContactTypeStep(true)} className="flex-1">
                     Back
