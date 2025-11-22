@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Flame, Target, TrendingUp, Users, TrendingUp as TrailblazerIcon, Calendar, Building2 } from "lucide-react";
+import { Flame, Target, TrendingUp, Users, TrendingUp as TrailblazerIcon, Calendar, Building2, Briefcase } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { LogInteractionDialog } from "@/components/LogInteractionDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
@@ -415,19 +415,36 @@ const Dashboard = () => {
                         variant="outline"
                         className={
                           action.contact.contact_type === "connector"
-                            ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-accent/10 text-accent border-accent/20"
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-300"
+                            : action.contact.contact_type === "trailblazer"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-300"
+                            : action.contact.contact_type === "reliable_recruiter"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-300"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-300"
                         }
                       >
-                        {action.contact.contact_type === "connector" ? (
+                        {action.contact.contact_type === "connector" && (
                           <>
                             <Users className="h-3 w-3 mr-1" />
                             Connector
                           </>
-                        ) : (
+                        )}
+                        {action.contact.contact_type === "trailblazer" && (
                           <>
                             <TrailblazerIcon className="h-3 w-3 mr-1" />
                             Trailblazer
+                          </>
+                        )}
+                        {action.contact.contact_type === "reliable_recruiter" && (
+                          <>
+                            <Briefcase className="h-3 w-3 mr-1" />
+                            Reliable Recruiter
+                          </>
+                        )}
+                        {action.contact.contact_type === "unspecified" && (
+                          <>
+                            <Users className="h-3 w-3 mr-1" />
+                            Unspecified
                           </>
                         )}
                       </Badge>

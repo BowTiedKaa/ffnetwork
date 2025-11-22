@@ -21,7 +21,7 @@ const contactSchema = z.object({
   role: z.string().trim().max(100, "Role must be less than 100 characters").optional(),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
   warmth_level: z.enum(["warm", "cooling", "cold"]),
-  contact_type: z.enum(["connector", "trailblazer"]),
+  contact_type: z.enum(["connector", "trailblazer", "reliable_recruiter", "unspecified"]),
 });
 
 interface Company {
@@ -52,7 +52,7 @@ export const EditContactDialog = ({
     role: "",
     warmth_level: "cold",
     notes: "",
-    contact_type: "connector" as "connector" | "trailblazer",
+    contact_type: "unspecified" as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +82,7 @@ export const EditContactDialog = ({
         role: data.role || "",
         warmth_level: (data.warmth_level || "cold") as "warm" | "cooling" | "cold",
         notes: data.notes || "",
-        contact_type: (data.contact_type || "connector") as "connector" | "trailblazer",
+        contact_type: (data.contact_type || "unspecified") as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
       });
     }
     setIsLoading(false);
@@ -363,7 +363,7 @@ export const EditContactDialog = ({
             <Label htmlFor="contact_type">Contact Type</Label>
             <Select
               value={formData.contact_type}
-              onValueChange={(value: "connector" | "trailblazer") =>
+              onValueChange={(value: "connector" | "trailblazer" | "reliable_recruiter" | "unspecified") =>
                 setFormData({ ...formData, contact_type: value })
               }
             >
@@ -371,8 +371,30 @@ export const EditContactDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="connector">Connector</SelectItem>
-                <SelectItem value="trailblazer">Trailblazer</SelectItem>
+                <SelectItem value="connector">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Connector</span>
+                    <span className="text-xs text-muted-foreground">Senior people, ex-colleagues, or mentors who can open doors and do warm introductions.</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="trailblazer">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Trailblazer</span>
+                    <span className="text-xs text-muted-foreground">Someone with a government/public background who already transitioned into the kind of role I want.</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="reliable_recruiter">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Reliable Recruiter</span>
+                    <span className="text-xs text-muted-foreground">Recruiters who consistently share relevant roles, give honest feedback, and have a track record of actually placing people in good roles.</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="unspecified">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Unspecified</span>
+                    <span className="text-xs text-muted-foreground">A contact who's relevant but not yet categorized.</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
