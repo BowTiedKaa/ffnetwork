@@ -158,7 +158,16 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-6">
+        {/* Context Section */}
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-semibold">What is FF Network?</h2>
+          <p className="text-muted-foreground text-sm">
+            A focused networking tool that helps you see who can help you reach the teams and opportunities you care about.
+          </p>
+        </div>
+
+        <Card className="w-full">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">
             {isLogin ? "Welcome back" : "Create an account"}
@@ -265,6 +274,7 @@ const Auth = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
