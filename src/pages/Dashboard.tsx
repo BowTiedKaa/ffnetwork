@@ -576,9 +576,17 @@ const Dashboard = () => {
       <OnboardingWizard open={showOnboarding} onComplete={handleOnboardingComplete} />
       
       <div className="space-y-6">
+        {/* Header Section */}
+        <div className="space-y-2 pb-4 border-b">
+          <h1 className="text-3xl font-bold">Build a network that supports your next career step</h1>
+          <p className="text-muted-foreground max-w-3xl">
+            FF Network helps you stay organized with the people who matter and track your warm paths into companies so you can maintain consistent outreach.
+          </p>
+        </div>
+
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+            <h2 className="text-2xl font-bold mb-2">Dashboard</h2>
             <p className="text-muted-foreground">Your daily networking goals</p>
           </div>
           <div className="w-64">
