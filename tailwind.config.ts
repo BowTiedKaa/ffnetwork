@@ -59,6 +59,7 @@ export default {
         },
         warmth: {
           warm: "hsl(var(--warmth-warm))",
+          hot: "hsl(var(--warmth-hot))",
           cooling: "hsl(var(--warmth-cooling))",
           cold: "hsl(var(--warmth-cold))",
         },

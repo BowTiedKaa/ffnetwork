@@ -331,7 +331,9 @@ const Companies = () => {
     switch (warmth) {
       case "warm":
         return "bg-warmth-warm text-warmth-warm-foreground";
-      case "cooling":
+      case "hot":
+        return "bg-warmth-hot text-warmth-hot-foreground";
+      case "cooling": // legacy support
         return "bg-warmth-cooling text-warmth-cooling-foreground";
       case "cold":
         return "bg-warmth-cold text-warmth-cold-foreground";
@@ -343,7 +345,7 @@ const Companies = () => {
   const groupContactsByWarmth = () => {
     const groups = {
       warm: companyContacts.filter(c => c.warmth_level === "warm"),
-      cooling: companyContacts.filter(c => c.warmth_level === "cooling"),
+      hot: companyContacts.filter(c => c.warmth_level === "hot" || c.warmth_level === "cooling"),
       cold: companyContacts.filter(c => c.warmth_level === "cold"),
     };
     return groups;
@@ -490,10 +492,11 @@ const Companies = () => {
             <Card 
               key={company.id} 
               className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleCompanyClick(company)}
             >
               <CardHeader>
                   <div className="flex items-start justify-between">
-                  <div className="flex-1" onClick={() => handleCompanyClick(company)}>
+                  <div className="flex-1">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Building2 className="h-5 w-5" />
                       {company.name}
@@ -502,25 +505,19 @@ const Companies = () => {
                       )}
                     </CardTitle>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {getPriorityBadge(company.priority)}
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditCompanyId(company.id);
-                      }}
+                      onClick={() => setEditCompanyId(company.id)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setArchiveCompanyId(company.id);
-                      }}
+                      onClick={() => setArchiveCompanyId(company.id)}
                       title={company.is_archived ? "Restore company" : "Archive company"}
                     >
                       {company.is_archived ? (
@@ -533,10 +530,7 @@ const Companies = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteCompanyId(company.id);
-                        }}
+                        onClick={() => setDeleteCompanyId(company.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>

@@ -139,13 +139,13 @@ const Dashboard = () => {
       });
     }
 
-    // 2. Prioritize cooling contacts (15-30 days)
+    // 2. Prioritize hot/cooling contacts (15-30 days) - support both new and legacy values
     if (contacts && actions.length < 3) {
-      const coolingContacts = contacts.filter(
-        (contact: Contact) => contact.warmth_level === "cooling"
+      const hotContacts = contacts.filter(
+        (contact: Contact) => contact.warmth_level === "hot" || contact.warmth_level === "cooling"
       );
       
-      coolingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+      hotContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
         const daysAgo = contact.last_contact_date
           ? Math.floor(
               (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
@@ -336,10 +336,10 @@ const Dashboard = () => {
       case "follow_up":
         return "Follow up today";
       case "cold_contact":
-        if (contact.warmth_level === "cooling") {
+        if (contact.warmth_level === "hot" || contact.warmth_level === "cooling") {
           return action.daysAgo
-            ? `Cooling - last contact ${action.daysAgo} days ago`
-            : "Cooling - reconnect soon";
+            ? `Hot - last contact ${action.daysAgo} days ago`
+            : "Hot - reconnect soon";
         }
         if (contact.contact_type === "reliable_recruiter") {
           return "Check in for new opportunities";

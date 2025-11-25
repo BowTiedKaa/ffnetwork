@@ -39,6 +39,7 @@ All colors MUST be HSL.
     --radius: 0.5rem;
     
     --warmth-warm: 142 76% 36%;
+    --warmth-hot: 0 84% 60%;
     --warmth-cooling: 45 93% 47%;
     --warmth-cold: 215 16.3% 46.9%;
 

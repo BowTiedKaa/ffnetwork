@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils";
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
   email: z.string().trim().max(255, "Email must be less than 255 characters").email("Invalid email address").optional().or(z.literal("")),
-  company: z.string().trim().max(100, "Company name must be less than 100 characters").optional(),
-  role: z.string().trim().max(100, "Role must be less than 100 characters").optional(),
-  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
-  warmth_level: z.enum(["warm", "cooling", "cold"]),
+  company: z.string().trim().max(100, "Company name must be less than 100 characters").optional().or(z.literal("")),
+  role: z.string().trim().max(100, "Role must be less than 100 characters").optional().or(z.literal("")),
+  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional().or(z.literal("")),
+  warmth_level: z.enum(["warm", "hot", "cold"]),
   contact_type: z.enum(["connector", "trailblazer", "reliable_recruiter", "unspecified"]),
 });
 
@@ -66,7 +66,7 @@ export const EditContactDialog = ({
     email: "",
     company: "",
     role: "",
-    warmth_level: "cold",
+    warmth_level: "cold" as "warm" | "hot" | "cold",
     notes: "",
     contact_type: "unspecified" as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
     connector_influence_company_ids: [] as string[],
@@ -93,12 +93,16 @@ export const EditContactDialog = ({
       .single();
 
     if (data) {
+      // Map legacy 'cooling' to 'hot' for database compatibility
+      let warmth = data.warmth_level || "cold";
+      if (warmth === "cooling") warmth = "hot";
+      
       setFormData({
         name: data.name || "",
         email: data.email || "",
         company: data.company || "",
         role: data.role || "",
-        warmth_level: (data.warmth_level || "cold") as "warm" | "cooling" | "cold",
+        warmth_level: warmth as "warm" | "hot" | "cold",
         notes: data.notes || "",
         contact_type: (data.contact_type || "unspecified") as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
         connector_influence_company_ids: data.connector_influence_company_ids || [],
@@ -484,14 +488,14 @@ export const EditContactDialog = ({
             <Label htmlFor="warmth">Relationship Warmth</Label>
             <Select
               value={formData.warmth_level}
-              onValueChange={(value) => setFormData({ ...formData, warmth_level: value })}
+              onValueChange={(value: "warm" | "hot" | "cold") => setFormData({ ...formData, warmth_level: value })}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="warm">Warm</SelectItem>
-                <SelectItem value="cooling">Cooling</SelectItem>
+                <SelectItem value="hot">Hot</SelectItem>
                 <SelectItem value="cold">Cold</SelectItem>
               </SelectContent>
             </Select>

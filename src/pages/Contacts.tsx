@@ -25,10 +25,10 @@ import { format } from "date-fns";
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
   email: z.string().trim().max(255, "Email must be less than 255 characters").email("Invalid email address").optional().or(z.literal("")),
-  company: z.string().trim().max(100, "Company name must be less than 100 characters").optional(),
-  role: z.string().trim().max(100, "Role must be less than 100 characters").optional(),
-  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
-  warmth_level: z.enum(["warm", "cooling", "cold"]),
+  company: z.string().trim().max(100, "Company name must be less than 100 characters").optional().or(z.literal("")),
+  role: z.string().trim().max(100, "Role must be less than 100 characters").optional().or(z.literal("")),
+  notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional().or(z.literal("")),
+  warmth_level: z.enum(["warm", "hot", "cold"]),
   contact_type: z.enum(["connector", "trailblazer", "reliable_recruiter", "unspecified"]),
 });
 
@@ -72,7 +72,7 @@ const Contacts = () => {
     email: "",
     company: "",
     role: "",
-    warmth_level: "cold",
+    warmth_level: "cold" as "warm" | "hot" | "cold",
     notes: "",
     contact_type: "unspecified" as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
     connector_influence_company_ids: [] as string[],
@@ -314,7 +314,8 @@ const Contacts = () => {
   const getWarmthColor = (level: string) => {
     switch (level) {
       case "warm": return "bg-warmth-warm";
-      case "cooling": return "bg-warmth-cooling";
+      case "hot": return "bg-warmth-hot";
+      case "cooling": return "bg-warmth-cooling"; // legacy support
       case "cold": return "bg-warmth-cold";
       default: return "bg-warmth-cold";
     }
@@ -430,50 +431,54 @@ const Contacts = () => {
             {contactTypeStep ? (
               <div className="space-y-4 py-4">
                 <RadioGroup onValueChange={(value) => handleContactTypeSelect(value as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified")}>
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                  <Label 
+                    htmlFor="connector" 
+                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                  >
                     <RadioGroupItem value="connector" id="connector" />
                     <div className="flex-1">
-                      <Label htmlFor="connector" className="cursor-pointer font-semibold">
-                        Connector
-                      </Label>
+                      <span className="font-semibold">Connector</span>
                       <p className="text-sm text-muted-foreground mt-1">
                         Senior people, ex-colleagues, or mentors who can open doors and do warm introductions.
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                  </Label>
+                  <Label 
+                    htmlFor="trailblazer" 
+                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                  >
                     <RadioGroupItem value="trailblazer" id="trailblazer" />
                     <div className="flex-1">
-                      <Label htmlFor="trailblazer" className="cursor-pointer font-semibold">
-                        Trailblazer
-                      </Label>
+                      <span className="font-semibold">Trailblazer</span>
                       <p className="text-sm text-muted-foreground mt-1">
                         Someone with a government/public background who already transitioned into the kind of role I want.
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                  </Label>
+                  <Label 
+                    htmlFor="reliable_recruiter" 
+                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                  >
                     <RadioGroupItem value="reliable_recruiter" id="reliable_recruiter" />
                     <div className="flex-1">
-                      <Label htmlFor="reliable_recruiter" className="cursor-pointer font-semibold">
-                        Reliable Recruiter
-                      </Label>
+                      <span className="font-semibold">Reliable Recruiter</span>
                       <p className="text-sm text-muted-foreground mt-1">
                         Recruiters who consistently share relevant roles, give honest feedback, and have a track record of actually placing people in good roles.
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                  </Label>
+                  <Label 
+                    htmlFor="unspecified" 
+                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                  >
                     <RadioGroupItem value="unspecified" id="unspecified" />
                     <div className="flex-1">
-                      <Label htmlFor="unspecified" className="cursor-pointer font-semibold">
-                        Unspecified
-                      </Label>
+                      <span className="font-semibold">Unspecified</span>
                       <p className="text-sm text-muted-foreground mt-1">
                         A contact who's relevant but not yet categorized.
                       </p>
                     </div>
-                  </div>
+                  </Label>
                 </RadioGroup>
               </div>
             ) : (
@@ -574,13 +579,16 @@ const Contacts = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="warmth">Relationship Warmth</Label>
-                <Select value={formData.warmth_level} onValueChange={(value) => setFormData({ ...formData, warmth_level: value })}>
+                <Select 
+                  value={formData.warmth_level} 
+                  onValueChange={(value: "warm" | "hot" | "cold") => setFormData({ ...formData, warmth_level: value })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
                     <SelectItem value="warm">Warm - Recent contact (last 14 days)</SelectItem>
-                    <SelectItem value="cooling">Cooling - Contact 15-30 days ago</SelectItem>
+                    <SelectItem value="hot">Hot - Contact 15-30 days ago</SelectItem>
                     <SelectItem value="cold">Cold - No contact in 30+ days</SelectItem>
                   </SelectContent>
                 </Select>
@@ -711,7 +719,11 @@ const Contacts = () => {
             const ContactIcon = contactTypeInfo.icon;
             
             return (
-              <Card key={contact.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={contact.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setEditContactId(contact.id)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -729,7 +741,7 @@ const Contacts = () => {
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full ${getWarmthColor(contact.warmth_level)}`} />
                           <span className="text-xs capitalize text-muted-foreground">
-                            {contact.warmth_level}
+                            {contact.warmth_level === "hot" ? "hot" : contact.warmth_level}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -737,7 +749,7 @@ const Contacts = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="icon"
                         variant="ghost"
@@ -791,7 +803,7 @@ const Contacts = () => {
 
                   {/* Suggested Actions */}
                   {!contact.is_archived && (
-                    <div className="pt-3 border-t mt-3">
+                    <div className="pt-3 border-t mt-3" onClick={(e) => e.stopPropagation()}>
                       <p className="text-xs font-medium text-muted-foreground mb-2">Suggested Actions</p>
                       <div className="flex flex-wrap gap-2">
                         {getSuggestedActions(contact).map((action, idx) => (
