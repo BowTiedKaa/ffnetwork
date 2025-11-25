@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,12 +10,14 @@ import { Flame, Target, TrendingUp, Users, TrendingUp as TrailblazerIcon, Calend
 import { formatDistanceToNow } from "date-fns";
 import { LogInteractionDialog } from "@/components/LogInteractionDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
-import { OnboardingWizard } from "@/components/OnboardingWizard";
+import { SimpleOnboarding } from "@/components/SimpleOnboarding";
 import { NetworkHeatmap } from "@/components/NetworkHeatmap";
 import { WeeklySummary } from "@/components/WeeklySummary";
 import { BadgeSystem } from "@/components/BadgeSystem";
 import { OfferMomentumMeter } from "@/components/OfferMomentumMeter";
 import { useDashboardData } from "@/hooks/useDashboardData";
+
+const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 
 interface DailyTask {
   id: string;
@@ -54,6 +57,7 @@ interface TodayAction {
 }
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   // Use centralized data hook
   const { tasks, streak, contacts, companies, interactions, followUps, loading, refetch } = useDashboardData();
   
@@ -63,12 +67,17 @@ const Dashboard = () => {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const { toast } = useToast();
 
-  // Check if onboarding is needed
+  // Check if onboarding is needed (only for users with no contacts and not completed)
   useEffect(() => {
-    if (!loading && contacts.length === 0 && companies.length === 0) {
+    if (loading) return;
+    
+    const onboardingComplete = localStorage.getItem(ONBOARDING_COMPLETE_KEY) === "true";
+    const hasContacts = contacts.length > 0;
+    
+    if (!onboardingComplete && !hasContacts) {
       setShowOnboarding(true);
     }
-  }, [loading, contacts.length, companies.length]);
+  }, [loading, contacts.length]);
 
   // Backfill company IDs for old contacts
   useEffect(() => {
@@ -452,14 +461,23 @@ const Dashboard = () => {
   const weeklyStats = getWeeklyStats();
   const companiesWithWarmPaths = getCompaniesWithWarmPaths();
 
+  const handleAddConnector = () => {
+    // Navigate to contacts page with connector type preselected
+    navigate("/contacts?addConnector=true");
+  };
+
   const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true");
     setShowOnboarding(false);
-    refetch();
   };
 
   return (
     <>
-      <OnboardingWizard open={showOnboarding} onComplete={handleOnboardingComplete} />
+      <SimpleOnboarding 
+        open={showOnboarding} 
+        onAddConnector={handleAddConnector}
+        onComplete={handleOnboardingComplete}
+      />
       
       <div className="space-y-6">
         {/* Header Section */}
