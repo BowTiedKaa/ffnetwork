@@ -424,15 +424,12 @@ const Dashboard = () => {
       return created >= sevenDaysAgo && c.company;
     }).length;
 
-    const currentStrength = calculateNetworkStrength();
-    const strengthChange = currentStrength - previousNetworkStrength;
-
     return {
       interactionsThisWeek,
       warmContacts,
       coolingSaved,
       newPaths,
-      networkStrengthChange: strengthChange,
+      networkStrengthChange: 0, // TODO: Track historical network strength for comparison
       currentStreak: streak?.current_streak || 0,
     };
   };
@@ -457,7 +454,7 @@ const Dashboard = () => {
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
-    fetchDashboardData();
+    refetch();
   };
 
   return (
@@ -726,7 +723,7 @@ const Dashboard = () => {
             contactId={selectedContact.id}
             contactName={selectedContact.name}
             onSuccess={() => {
-              fetchDashboardData();
+              refetch();
               setSelectedContact(null);
             }}
           />
