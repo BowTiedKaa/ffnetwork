@@ -29,14 +29,14 @@ export const SendMessageDialog = ({
   const getMessageTemplate = () => {
     const firstName = contactName.split(" ")[0];
     const company = companyName || "[company]";
-    const roleTeam = targetRole || "[role/team]";
+    const roleTeam = targetRole || "[role or team]";
     const specificDate = "[specific date]";
     
     switch (contactType) {
       case "connector":
         return `Hi ${firstName},
 
-Do you have 15–20 minutes on ${specificDate}? I'd like to talk through the ${roleTeam} at ${company} and get your perspective on whether it's a strong fit. Your read on the people involved would be helpful.
+Do you have 15–20 minutes on ${specificDate}? I'd like to discuss the ${roleTeam} at ${company} and get your perspective on whether it makes sense to pursue and who I should be speaking with.
 
 Best,
 [YourName]`;
@@ -44,7 +44,7 @@ Best,
       case "trailblazer":
         return `Hi ${firstName},
 
-Do you have 15–20 minutes on ${specificDate}? I'm looking at the ${roleTeam} at ${company} and wanted to hear how you handled your own transition and what you'd focus on early in the process.
+Do you have 15–20 minutes on ${specificDate}? I'm looking at the ${roleTeam} at ${company} and wanted to hear how you handled your own transition and what you would focus on early in the process.
 
 Best,
 [YourName]`;
@@ -52,7 +52,7 @@ Best,
       case "reliable_recruiter":
         return `Hi ${firstName},
 
-Are you available for 15–20 minutes on ${specificDate}? I'm preparing for the ${roleTeam} at ${company} and wanted your perspective on how this team evaluates candidates and where people tend to get stuck.
+Are you available for 15–20 minutes on ${specificDate}? I'm preparing for the ${roleTeam} at ${company} and wanted your perspective on how this team evaluates candidates and where candidates tend to get stuck.
 
 Best,
 [YourName]`;

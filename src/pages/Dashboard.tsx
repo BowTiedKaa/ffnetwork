@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { NetworkHeatmap } from "@/components/NetworkHeatmap";
 import { WeeklySummary } from "@/components/WeeklySummary";
 import { BadgeSystem } from "@/components/BadgeSystem";
 import { OfferMomentumMeter } from "@/components/OfferMomentumMeter";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface DailyTask {
   id: string;
@@ -53,300 +54,193 @@ interface TodayAction {
 }
 
 const Dashboard = () => {
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
-  const [streak, setStreak] = useState<Streak | null>(null);
-  const [todayActions, setTodayActions] = useState<TodayAction[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [interactions, setInteractions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use centralized data hook
+  const { tasks, streak, contacts, companies, interactions, followUps, loading, refetch } = useDashboardData();
+  
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [logInteractionOpen, setLogInteractionOpen] = useState(false);
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [previousNetworkStrength, setPreviousNetworkStrength] = useState(0);
   const { toast } = useToast();
 
+  // Check if onboarding is needed
   useEffect(() => {
-    fetchDashboardData();
-    backfillCompanyIds();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const today = new Date().toISOString().split("T")[0];
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
-
-      // First, fetch all contacts and update their warmth status (exclude archived)
-      const { data: allContacts } = await supabase
-        .from("contacts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_archived", false);
-
-      // Calculate and update warmth status for each contact
-      if (allContacts) {
-        const now = new Date();
-        const updates = allContacts.map(contact => {
-          if (!contact.last_contact_date) return null;
-          
-          const lastContactDate = new Date(contact.last_contact_date);
-          const daysSinceContact = Math.floor((now.getTime() - lastContactDate.getTime()) / (1000 * 60 * 60 * 24));
-          
-          let newWarmthStatus: string;
-          if (daysSinceContact <= 14) {
-            newWarmthStatus = "warm";
-          } else if (daysSinceContact <= 30) {
-            newWarmthStatus = "cooling";
-          } else {
-            newWarmthStatus = "cold";
-          }
-          
-          // Only update if warmth status changed
-          if (contact.warmth_level !== newWarmthStatus) {
-            return supabase
-              .from("contacts")
-              .update({ warmth_level: newWarmthStatus })
-              .eq("id", contact.id);
-          }
-          return null;
-        }).filter(Boolean);
-
-        // Execute all updates
-        await Promise.all(updates);
-      }
-
-      // Now fetch all data including updated contacts
-      const [tasksResult, streakResult, followUpsResult, contactsResult, companiesResult, interactionsResult] = await Promise.all([
-        supabase
-          .from("daily_tasks")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("due_date", today)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("streaks")
-          .select("*")
-          .eq("user_id", user.id)
-          .single(),
-        supabase
-          .from("follow_ups")
-          .select("*, contacts(*)")
-          .eq("user_id", user.id)
-          .eq("due_date", today)
-          .eq("completed", false),
-        supabase
-          .from("contacts")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("is_archived", false),
-        supabase
-          .from("companies")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("is_archived", false),
-        supabase
-          .from("interactions")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("interaction_date", { ascending: false }),
-      ]);
-
-      if (tasksResult.data) setTasks(tasksResult.data);
-      if (streakResult.data) setStreak(streakResult.data);
-      if (contactsResult.data) setContacts(contactsResult.data as Contact[]);
-      if (companiesResult.data) setCompanies(companiesResult.data);
-      if (interactionsResult.data) setInteractions(interactionsResult.data);
-
-      // Check if user needs onboarding
-      if (contactsResult.data?.length === 0 && companiesResult.data?.length === 0) {
-        setShowOnboarding(true);
-      }
-
-      // Generate today's actions
-      const actions: TodayAction[] = [];
-      
-      // 1. Follow-ups due today
-      if (followUpsResult.data) {
-        followUpsResult.data.forEach((followUp: any) => {
-          if (followUp.contacts && actions.length < 3) {
-            actions.push({
-              type: "follow_up",
-              contact: followUp.contacts,
-              followUpId: followUp.id,
-            });
-          }
-        });
-      }
-
-      // 2. Prioritize cooling contacts (15-30 days)
-      if (contactsResult.data && actions.length < 3) {
-        const coolingContacts = contactsResult.data.filter(
-          (contact: Contact) => contact.warmth_level === "cooling"
-        );
-        
-        coolingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
-          const daysAgo = contact.last_contact_date
-            ? Math.floor(
-                (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
-                  (1000 * 60 * 60 * 24)
-              )
-            : null;
-          
-          actions.push({
-            type: "cold_contact",
-            contact,
-            daysAgo: daysAgo || undefined,
-          });
-        });
-      }
-
-      // 3. Connectors with influence at target companies
-      if (companiesResult.data && contactsResult.data && actions.length < 3) {
-        const targetCompanyIds = companiesResult.data.map((c: any) => c.id);
-        const connectorsWithInfluence = contactsResult.data.filter(
-          (contact: Contact) =>
-            contact.contact_type === "connector" &&
-            contact.connector_influence_company_ids &&
-            contact.connector_influence_company_ids.some(id => targetCompanyIds.includes(id))
-        );
-
-        connectorsWithInfluence.slice(0, 3 - actions.length).forEach((contact: Contact) => {
-          const influencedCompany = companiesResult.data?.find((c: any) => 
-            contact.connector_influence_company_ids?.includes(c.id)
-          );
-          
-          actions.push({
-            type: "company_overlap",
-            contact,
-            targetCompany: influencedCompany?.name || contact.company || undefined,
-          });
-        });
-      }
-
-      // 4. Cold contacts tied to target companies
-      if (companiesResult.data && contactsResult.data && actions.length < 3) {
-        const targetCompanies = companiesResult.data.map((c: any) => c.name.toLowerCase());
-        const overlappingContacts = contactsResult.data.filter(
-          (contact: Contact) =>
-            contact.company &&
-            targetCompanies.includes(contact.company.toLowerCase()) &&
-            contact.warmth_level === "cold" &&
-            !actions.some(a => a.contact.id === contact.id)
-        );
-
-        overlappingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
-          actions.push({
-            type: "company_overlap",
-            contact,
-            targetCompany: contact.company || undefined,
-          });
-        });
-      }
-
-      // 5. Contacts with no recent interactions
-      if (contactsResult.data && actions.length < 3) {
-        const noRecentInteractions = contactsResult.data.filter(
-          (contact: Contact) =>
-            !contact.last_contact_date &&
-            !actions.some(a => a.contact.id === contact.id)
-        );
-        
-        noRecentInteractions.slice(0, 3 - actions.length).forEach((contact: Contact) => {
-          actions.push({
-            type: "cold_contact",
-            contact,
-            daysAgo: undefined,
-          });
-        });
-      }
-
-      // 6. Reliable recruiters
-      if (contactsResult.data && actions.length < 3) {
-        const reliableRecruiters = contactsResult.data.filter(
-          (contact: Contact) =>
-            contact.contact_type === "reliable_recruiter" &&
-            !actions.some(a => a.contact.id === contact.id)
-        );
-        
-        reliableRecruiters.slice(0, 3 - actions.length).forEach((contact: Contact) => {
-          actions.push({
-            type: "cold_contact",
-            contact,
-          });
-        });
-      }
-
-      setTodayActions(actions);
-    } catch (error) {
-      // Error silently handled - user will see empty state
-    } finally {
-      setLoading(false);
+    if (!loading && contacts.length === 0 && companies.length === 0) {
+      setShowOnboarding(true);
     }
-  };
+  }, [loading, contacts.length, companies.length]);
 
-  const backfillCompanyIds = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  // Backfill company IDs for old contacts
+  useEffect(() => {
+    const backfillCompanyIds = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      // Fetch contacts that need backfilling (have company text but no company_id)
-      const { data: contactsNeedingBackfill } = await supabase
-        .from("contacts")
-        .select("id, company")
-        .eq("user_id", user.id)
-        .not("company", "is", null)
-        .is("company_id", null);
+        const { data: contactsWithoutCompanyId } = await supabase
+          .from("contacts")
+          .select("id, company")
+          .eq("user_id", user.id)
+          .is("company_id", null)
+          .not("company", "is", null);
 
-      if (!contactsNeedingBackfill || contactsNeedingBackfill.length === 0) {
-        return; // Nothing to backfill
+        if (!contactsWithoutCompanyId || contactsWithoutCompanyId.length === 0) return;
+
+        const { data: allCompanies } = await supabase
+          .from("companies")
+          .select("id, name")
+          .eq("user_id", user.id)
+          .eq("is_archived", false);
+
+        if (!allCompanies) return;
+
+        const updates = contactsWithoutCompanyId
+          .map(contact => {
+            const matchingCompany = allCompanies.find(
+              c => c.name.toLowerCase() === contact.company?.toLowerCase()
+            );
+            if (matchingCompany) {
+              return supabase
+                .from("contacts")
+                .update({ company_id: matchingCompany.id })
+                .eq("id", contact.id);
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        if (updates.length > 0) {
+          await Promise.all(updates);
+        }
+      } catch (error) {
+        console.error("Error backfilling company IDs:", error);
       }
+    };
 
-      // Fetch all user's companies for matching (exclude archived)
-      const { data: companies } = await supabase
-        .from("companies")
-        .select("id, name")
-        .eq("user_id", user.id)
-        .eq("is_archived", false);
+    if (!loading) {
+      backfillCompanyIds();
+    }
+  }, [loading]);
 
-      if (!companies) return;
+  // Generate today's actions (memoized)
+  const todayActions = useMemo(() => {
+    const actions: TodayAction[] = [];
+    
+    // 1. Follow-ups due today
+    if (followUps) {
+      followUps.forEach((followUp: any) => {
+        if (followUp.contacts && actions.length < 3) {
+          actions.push({
+            type: "follow_up",
+            contact: followUp.contacts,
+            followUpId: followUp.id,
+          });
+        }
+      });
+    }
 
-      // Create a case-insensitive lookup map
-      const companyMap = new Map(
-        companies.map(c => [c.name.toLowerCase().trim(), c.id])
+    // 2. Prioritize cooling contacts (15-30 days)
+    if (contacts && actions.length < 3) {
+      const coolingContacts = contacts.filter(
+        (contact: Contact) => contact.warmth_level === "cooling"
+      );
+      
+      coolingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+        const daysAgo = contact.last_contact_date
+          ? Math.floor(
+              (new Date().getTime() - new Date(contact.last_contact_date).getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          : null;
+        
+        actions.push({
+          type: "cold_contact",
+          contact,
+          daysAgo: daysAgo || undefined,
+        });
+      });
+    }
+
+    // 3. Connectors with influence at target companies
+    if (companies && contacts && actions.length < 3) {
+      const targetCompanyIds = companies.map((c: any) => c.id);
+      const connectorsWithInfluence = contacts.filter(
+        (contact: Contact) =>
+          contact.contact_type === "connector" &&
+          contact.connector_influence_company_ids &&
+          contact.connector_influence_company_ids.some(id => targetCompanyIds.includes(id))
       );
 
-      // Prepare batch updates
-      const updates = contactsNeedingBackfill
-        .map(contact => {
-          const companyId = companyMap.get(contact.company!.toLowerCase().trim());
-          if (companyId) {
-            return supabase
-              .from("contacts")
-              .update({ company_id: companyId })
-              .eq("id", contact.id);
-          }
-          return null;
-        })
-        .filter(Boolean);
-
-      // Execute all updates in parallel
-      if (updates.length > 0) {
-        await Promise.all(updates);
-        console.log(`Backfilled ${updates.length} contact(s) with company IDs`);
-      }
-    } catch (error) {
-      console.error("Error backfilling company IDs:", error);
-      // Fail silently - this is a background maintenance task
+      connectorsWithInfluence.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+        const influencedCompany = companies?.find((c: any) => 
+          contact.connector_influence_company_ids?.includes(c.id)
+        );
+        
+        actions.push({
+          type: "company_overlap",
+          contact,
+          targetCompany: influencedCompany?.name || contact.company || undefined,
+        });
+      });
     }
-  };
 
-  const handleTaskComplete = async (taskId: string, completed: boolean) => {
+    // 4. Cold contacts tied to target companies
+    if (companies && contacts && actions.length < 3) {
+      const targetCompanies = companies.map((c: any) => c.name.toLowerCase());
+      const overlappingContacts = contacts.filter(
+        (contact: Contact) =>
+          contact.company &&
+          targetCompanies.includes(contact.company.toLowerCase()) &&
+          contact.warmth_level === "cold" &&
+          !actions.some(a => a.contact.id === contact.id)
+      );
+
+      overlappingContacts.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+        actions.push({
+          type: "company_overlap",
+          contact,
+          targetCompany: contact.company || undefined,
+        });
+      });
+    }
+
+    // 5. Contacts with no recent interactions
+    if (contacts && actions.length < 3) {
+      const noRecentInteractions = contacts.filter(
+        (contact: Contact) =>
+          !contact.last_contact_date &&
+          !actions.some(a => a.contact.id === contact.id)
+      );
+      
+      noRecentInteractions.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+        actions.push({
+          type: "cold_contact",
+          contact,
+          daysAgo: undefined,
+        });
+      });
+    }
+
+    // 6. Reliable recruiters
+    if (contacts && actions.length < 3) {
+      const reliableRecruiters = contacts.filter(
+        (contact: Contact) =>
+          contact.contact_type === "reliable_recruiter" &&
+          !actions.some(a => a.contact.id === contact.id)
+      );
+      
+      reliableRecruiters.slice(0, 3 - actions.length).forEach((contact: Contact) => {
+        actions.push({
+          type: "cold_contact",
+          contact,
+        });
+      });
+    }
+
+    return actions;
+  }, [contacts, companies, followUps]);
+
+  const handleTaskComplete = useCallback(async (taskId: string, completed: boolean) => {
     try {
       const { error } = await supabase
         .from("daily_tasks")
@@ -354,8 +248,6 @@ const Dashboard = () => {
         .eq("id", taskId);
 
       if (error) throw error;
-
-      setTasks(tasks.map(t => t.id === taskId ? { ...t, completed } : t));
 
       if (completed) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -389,12 +281,6 @@ const Dashboard = () => {
                 last_activity_date: today,
               })
               .eq("user_id", user.id);
-
-            setStreak({
-              current_streak: newStreak,
-              longest_streak: Math.max(newStreak, currentStreak.longest_streak),
-              total_tasks_completed: currentStreak.total_tasks_completed + 1,
-            });
           }
         }
 
@@ -421,6 +307,9 @@ const Dashboard = () => {
           }, 1000);
         }
       }
+
+      // Refetch data to update UI
+      await refetch();
     } catch (error) {
       toast({
         title: "Error",
@@ -428,7 +317,7 @@ const Dashboard = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [streak, toast, refetch]);
 
   const getTaskTypeColor = (type: string) => {
     switch (type) {
