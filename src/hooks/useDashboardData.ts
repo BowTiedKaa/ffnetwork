@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+
+const CACHE_KEY = "dashboard_data_cache";
+const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 interface Contact {
   id: string;
@@ -40,15 +43,61 @@ interface DashboardData {
   loading: boolean;
 }
 
+interface CachedData {
+  data: Omit<DashboardData, 'loading'>;
+  timestamp: number;
+}
+
+const loadCachedData = (): Omit<DashboardData, 'loading'> | null => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const parsed: CachedData = JSON.parse(cached);
+    const now = Date.now();
+    
+    // Return cached data if not expired
+    if (now - parsed.timestamp < CACHE_EXPIRY_MS) {
+      return parsed.data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCachedData = (data: Omit<DashboardData, 'loading'>) => {
+  try {
+    const cacheData: CachedData = {
+      data,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 export const useDashboardData = () => {
-  const [data, setData] = useState<DashboardData>({
-    tasks: [],
-    streak: null,
-    contacts: [],
-    companies: [],
-    interactions: [],
-    followUps: [],
-    loading: true,
+  // Initialize with cached data if available
+  const cachedData = useRef(loadCachedData());
+  
+  const [data, setData] = useState<DashboardData>(() => {
+    if (cachedData.current) {
+      return {
+        ...cachedData.current,
+        loading: true, // Still loading to get fresh data
+      };
+    }
+    return {
+      tasks: [],
+      streak: null,
+      contacts: [],
+      companies: [],
+      interactions: [],
+      followUps: [],
+      loading: true,
+    };
   });
 
   const fetchDashboardData = useCallback(async () => {
@@ -135,13 +184,20 @@ export const useDashboardData = () => {
           .order("interaction_date", { ascending: false }),
       ]);
 
-      setData({
+      const newData = {
         tasks: tasksResult.data || [],
         streak: streakResult.data,
         contacts: (contactsResult.data as Contact[]) || [],
         companies: companiesResult.data || [],
         interactions: interactionsResult.data || [],
         followUps: followUpsResult.data || [],
+      };
+
+      // Cache the new data
+      saveCachedData(newData);
+
+      setData({
+        ...newData,
         loading: false,
       });
 
@@ -159,5 +215,11 @@ export const useDashboardData = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  return { ...data, refetch: fetchDashboardData };
+  // Function to clear cache and refetch
+  const refetch = useCallback(async () => {
+    localStorage.removeItem(CACHE_KEY);
+    return fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  return { ...data, refetch };
 };

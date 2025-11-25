@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EditContactDialog } from "@/components/EditContactDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { format } from "date-fns";
+
+const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -55,6 +58,7 @@ interface Company {
 }
 
 const Contacts = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -79,6 +83,18 @@ const Contacts = () => {
     recruiter_specialization: null as "industry_knowledge" | "interview_prep" | "offer_negotiation" | null,
   });
   const { toast } = useToast();
+
+  // Handle addConnector URL parameter from onboarding
+  useEffect(() => {
+    if (searchParams.get("addConnector") === "true") {
+      // Open dialog with connector preselected, skip type selection step
+      setFormData(prev => ({ ...prev, contact_type: "connector" }));
+      setContactTypeStep(false);
+      setIsOpen(true);
+      // Clear the URL parameter
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchContacts();
@@ -192,6 +208,11 @@ const Contacts = () => {
         title: "Contact added!",
         description: "Successfully added to your network",
       });
+
+      // Mark onboarding as complete if this was the first connector
+      if (validatedData.contact_type === "connector") {
+        localStorage.setItem(ONBOARDING_COMPLETE_KEY, "true");
+      }
 
       setIsOpen(false);
       setContactTypeStep(true);
