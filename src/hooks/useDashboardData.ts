@@ -79,7 +79,7 @@ export const useDashboardData = () => {
             if (daysSinceContact <= 14) {
               newWarmthStatus = "warm";
             } else if (daysSinceContact <= 30) {
-              newWarmthStatus = "cooling";
+              newWarmthStatus = "hot";
             } else {
               newWarmthStatus = "cold";
             }

@@ -26,7 +26,7 @@ interface ContactData {
   name: string;
   company: string;
   contact_type: "connector" | "trailblazer" | "reliable_recruiter" | "unspecified";
-  warmth_level: "warm" | "cooling" | "cold";
+  warmth_level: "warm" | "hot" | "cold";
   notes: string;
 }
 
