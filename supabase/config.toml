@@ -1,1 +1,11 @@
 project_id = "gwxbbvvudenptargeznt"
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.hook.send_email]
+enabled = true
+uri = "http://host.docker.internal:54321/functions/v1/send-password-reset"
+secrets = "SEND_PASSWORD_RESET_HOOK_SECRET"
