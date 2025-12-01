@@ -16,8 +16,11 @@ import { WeeklySummary } from "@/components/WeeklySummary";
 import { BadgeSystem } from "@/components/BadgeSystem";
 import { OfferMomentumMeter } from "@/components/OfferMomentumMeter";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
+const TODAY_ACTIONS_CACHE_KEY = "ffn_today_actions_cache";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 interface DailyTask {
   id: string;
@@ -65,19 +68,37 @@ const Dashboard = () => {
   const [logInteractionOpen, setLogInteractionOpen] = useState(false);
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [cachedActions, setCachedActions] = useState<TodayAction[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check if onboarding is needed (only for users with no contacts and not completed)
+  // Load cached actions on mount
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(TODAY_ACTIONS_CACHE_KEY);
+      if (cached) {
+        const { actions, timestamp } = JSON.parse(cached);
+        const now = Date.now();
+        if (now - timestamp < CACHE_DURATION) {
+          setCachedActions(actions);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cached actions:", error);
+    }
+  }, []);
+
+  // Check if onboarding is needed (only for users with no non-archived contacts and not completed)
   useEffect(() => {
     if (loading) return;
     
     const onboardingComplete = localStorage.getItem(ONBOARDING_COMPLETE_KEY) === "true";
-    const hasContacts = contacts.length > 0;
+    const hasActiveContacts = contacts.filter(c => !c.is_archived).length > 0;
     
-    if (!onboardingComplete && !hasContacts) {
+    if (!onboardingComplete && !hasActiveContacts) {
       setShowOnboarding(true);
     }
-  }, [loading, contacts.length]);
+  }, [loading, contacts]);
 
   // Backfill company IDs for old contacts
   useEffect(() => {
@@ -248,6 +269,22 @@ const Dashboard = () => {
 
     return actions;
   }, [contacts, companies, followUps]);
+
+  // Cache actions and update loading state
+  useEffect(() => {
+    if (!loading && todayActions.length > 0) {
+      try {
+        localStorage.setItem(TODAY_ACTIONS_CACHE_KEY, JSON.stringify({
+          actions: todayActions,
+          timestamp: Date.now()
+        }));
+        setCachedActions(todayActions);
+      } catch (error) {
+        console.error("Error caching actions:", error);
+      }
+    }
+    setActionsLoading(loading);
+  }, [todayActions, loading]);
 
   const handleTaskComplete = useCallback(async (taskId: string, completed: boolean) => {
     try {
@@ -544,7 +581,23 @@ const Dashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {todayActions.length === 0 ? (
+          {actionsLoading && cachedActions.length === 0 ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-4 p-4 border rounded-lg">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-32" />
+                    <Skeleton className="h-9 w-28" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (actionsLoading ? cachedActions : todayActions).length === 0 ? (
             <div className="text-center py-8 space-y-4">
               <p className="text-muted-foreground">You're in good shape today!</p>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -558,7 +611,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {todayActions.map((action, index) => (
+              {(actionsLoading ? cachedActions : todayActions).map((action, index) => (
                 <div
                   key={`${action.contact.id}-${index}`}
                   className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent/5 transition-colors"
@@ -756,7 +809,11 @@ const Dashboard = () => {
           contactEmail={selectedContact.email}
           companyName={selectedContact.company}
           contactType={selectedContact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified" | null}
-          targetRole={selectedContact.role}
+          targetRole={
+            companies.find(c => 
+              selectedContact.company && c.name.toLowerCase() === selectedContact.company.toLowerCase()
+            )?.target_role || selectedContact.role
+          }
         />
       )}
       </div>

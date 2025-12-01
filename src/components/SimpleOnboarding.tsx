@@ -29,10 +29,10 @@ export const SimpleOnboarding = ({ open, onAddConnector, onComplete }: SimpleOnb
             <div className="text-center space-y-6">
               <Sparkles className="h-16 w-16 mx-auto text-primary" />
               <div className="space-y-3">
-                <h2 className="text-2xl font-bold">Welcome to FF Network</h2>
-                <p className="text-muted-foreground">
-                  FF Network helps you understand who can help you reach the roles and teams that matter and keeps your relationships active so you can move forward.
-                </p>
+          <h2 className="text-2xl font-bold">Welcome to FF Network</h2>
+          <p className="text-muted-foreground">
+            FF Network helps you track the people who can help your career move and stay consistent with outreach.
+          </p>
               </div>
               <Button onClick={() => setStep(2)} size="lg" className="w-full">
                 Continue

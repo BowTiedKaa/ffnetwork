@@ -23,7 +23,7 @@ import { EditContactDialog } from "@/components/EditContactDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { format } from "date-fns";
 
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
