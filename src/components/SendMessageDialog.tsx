@@ -36,34 +36,34 @@ export const SendMessageDialog = ({
       case "connector":
         return `Hi ${firstName},
 
-Do you have 15–20 minutes on ${specificDate}? I'd like to discuss the ${roleTeam} at ${company} and get your perspective on whether it makes sense to pursue and who I should be speaking with.
+Do you have 15–20 minutes on ${specificDate}? I would like to talk about the ${roleTeam} at ${company} and ask who you think I should be speaking with.
 
 Best,
-[YourName]`;
+[Your name]`;
       
       case "trailblazer":
         return `Hi ${firstName},
 
-Do you have 15–20 minutes on ${specificDate}? I'm looking at the ${roleTeam} at ${company} and wanted to hear how you handled your own transition and what you would focus on early in the process.
+Do you have 15–20 minutes on ${specificDate}? I am looking at the ${roleTeam} at ${company} and wanted to hear how you handled your own move and what you would focus on early.
 
 Best,
-[YourName]`;
+[Your name]`;
       
       case "reliable_recruiter":
         return `Hi ${firstName},
 
-Are you available for 15–20 minutes on ${specificDate}? I'm preparing for the ${roleTeam} at ${company} and wanted your perspective on how this team evaluates candidates and where candidates tend to get stuck.
+Are you available for 15–20 minutes on ${specificDate}? I am preparing for the ${roleTeam} at ${company} and would value your view on how this team evaluates candidates and where people most often get stuck.
 
 Best,
-[YourName]`;
+[Your name]`;
       
       default: // unspecified or null
         return `Hi ${firstName},
 
-Do you have 15–20 minutes on ${specificDate}? I'm exploring the ${roleTeam} at ${company} and would value your perspective.
+Do you have 15–20 minutes on ${specificDate}? I am exploring the ${roleTeam} at ${company} and would value your perspective.
 
 Best,
-[YourName]`;
+[Your name]`;
     }
   };
 
