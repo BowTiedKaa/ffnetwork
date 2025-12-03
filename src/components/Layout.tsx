@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { User, Session } from "@supabase/supabase-js";
-import { Home, Users, Building2, Calendar, LogOut } from "lucide-react";
+import { Home, Users, Building2, Calendar, LogOut, HelpCircle } from "lucide-react";
+import { SimpleOnboarding } from "@/components/SimpleOnboarding";
 import logo from "@/assets/former-fed-logo.jpg";
 
 interface LayoutProps {
@@ -13,6 +14,7 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [showOnboardingReplay, setShowOnboardingReplay] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,6 +47,14 @@ const Layout = ({ children }: LayoutProps) => {
     navigate("/auth");
   };
 
+  const handleReplayOnboarding = () => {
+    setShowOnboardingReplay(true);
+  };
+
+  const handleOnboardingReplayComplete = () => {
+    setShowOnboardingReplay(false);
+  };
+
   const navItems = [
     { path: "/dashboard", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
@@ -58,6 +68,15 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SimpleOnboarding
+        open={showOnboardingReplay}
+        onAddConnector={() => {
+          setShowOnboardingReplay(false);
+          navigate("/contacts?addConnector=true");
+        }}
+        onComplete={handleOnboardingReplayComplete}
+      />
+      
       <nav className="border-b bg-card">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
@@ -81,10 +100,21 @@ const Layout = ({ children }: LayoutProps) => {
                 })}
               </div>
             </div>
-            <Button variant="ghost" onClick={handleLogout} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReplayOnboarding}
+                className="gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">View onboarding</span>
+              </Button>
+              <Button variant="ghost" onClick={handleLogout} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
