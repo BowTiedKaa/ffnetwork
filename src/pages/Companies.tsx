@@ -49,6 +49,7 @@ interface Contact {
 
 const Companies = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
@@ -114,8 +115,12 @@ const Companies = () => {
   }, [showArchived]);
 
   const fetchCompanies = async () => {
+    setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("companies")
@@ -125,7 +130,7 @@ const Companies = () => {
       .order("priority", { ascending: false });
 
     if (data) setCompanies(data);
-    // Error silently handled - user will see empty state
+    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,10 +326,10 @@ const Companies = () => {
     }
   };
 
-  const getPriorityBadge = (priority: number) => {
-    if (priority >= 3) return <Badge className="bg-red-500">High Priority</Badge>;
-    if (priority >= 1) return <Badge className="bg-yellow-500">Medium Priority</Badge>;
-    return <Badge variant="secondary">Low Priority</Badge>;
+  const getPriorityLabel = (priority: number) => {
+    if (priority >= 3) return <span className="text-red-600 font-medium text-sm">High priority</span>;
+    if (priority >= 1) return <span className="text-yellow-600 font-medium text-sm">Medium priority</span>;
+    return <span className="text-gray-500 font-medium text-sm">Low priority</span>;
   };
 
   const getWarmthColor = (warmth: string | null) => {
@@ -476,7 +481,21 @@ const Companies = () => {
         </div>
       </div>
 
-      {companies.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : companies.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-muted-foreground mb-4">No target companies yet. Add companies you want to work at!</p>
@@ -506,7 +525,7 @@ const Companies = () => {
                     </CardTitle>
                   </div>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    {getPriorityBadge(company.priority)}
+                    {getPriorityLabel(company.priority)}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -592,7 +611,7 @@ const Companies = () => {
                     </p>
                   )}
                   <div className="pt-2">
-                    {getPriorityBadge(selectedCompany.priority)}
+                    {getPriorityLabel(selectedCompany.priority)}
                   </div>
                 </div>
 
