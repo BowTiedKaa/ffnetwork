@@ -61,6 +61,7 @@ const Contacts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [contactTypeStep, setContactTypeStep] = useState(true);
   const [editContactId, setEditContactId] = useState<string | null>(null);
@@ -102,8 +103,12 @@ const Contacts = () => {
   }, [showArchived]);
 
   const fetchContacts = async () => {
+    setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("contacts")
@@ -120,7 +125,7 @@ const Contacts = () => {
       }));
       setContacts(typedContacts);
     }
-    // Error silently handled - user will see empty state
+    setIsLoading(false);
   };
 
   const fetchCompanies = async () => {
@@ -695,7 +700,22 @@ const Contacts = () => {
         </div>
       </div>
 
-      {contacts.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-1/2 mt-2"></div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : contacts.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12 space-y-6">
             <div>
