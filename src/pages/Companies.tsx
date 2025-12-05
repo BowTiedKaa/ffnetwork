@@ -327,9 +327,9 @@ const Companies = () => {
   };
 
   const getPriorityLabel = (priority: number) => {
-    if (priority >= 3) return <span className="text-red-600 font-medium text-sm">High priority</span>;
-    if (priority >= 1) return <span className="text-yellow-600 font-medium text-sm">Medium priority</span>;
-    return <span className="text-gray-500 font-medium text-sm">Low priority</span>;
+    if (priority >= 3) return <span className="ml-2 text-red-600 font-medium text-sm">High priority</span>;
+    if (priority >= 1) return <span className="ml-2 text-yellow-600 font-medium text-sm">Medium priority</span>;
+    return <span className="ml-2 text-muted-foreground font-medium text-sm">Low priority</span>;
   };
 
   const getWarmthColor = (warmth: string | null) => {
