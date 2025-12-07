@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Users } from "lucide-react";
+import { Sparkles, Users, X } from "lucide-react";
 
 interface SimpleOnboardingProps {
   open: boolean;
@@ -17,17 +17,27 @@ export const SimpleOnboarding = ({ open, onAddConnector, onComplete }: SimpleOnb
     onComplete();
   };
 
-  const handleSkip = () => {
+  const handleClose = () => {
     onComplete();
   };
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); }}>
       <DialogContent 
-        className="max-w-lg" 
+        className="max-w-lg [&>button]:hidden" 
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
+        {/* Custom close button */}
+        <button
+          type="button"
+          onClick={handleClose}
+          aria-label="Close"
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        
         <div className="space-y-6 py-4">
           {step === 1 && (
             <div className="text-center space-y-6">
@@ -58,7 +68,7 @@ export const SimpleOnboarding = ({ open, onAddConnector, onComplete }: SimpleOnb
                   Add a connector
                 </Button>
                 <button
-                  onClick={handleSkip}
+                  onClick={handleClose}
                   className="text-sm text-muted-foreground hover:text-foreground underline transition-colors"
                 >
                   Skip for now

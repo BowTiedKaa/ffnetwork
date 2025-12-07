@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EditContactDialog } from "@/components/EditContactDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { format } from "date-fns";
+import { useContacts, invalidateContactsCache, Contact } from "@/hooks/useContacts";
 
 const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 
@@ -35,23 +36,6 @@ const contactSchema = z.object({
   contact_type: z.enum(["connector", "trailblazer", "reliable_recruiter", "unspecified"]),
 });
 
-interface Contact {
-  id: string;
-  name: string;
-  email: string | null;
-  company: string | null;
-  company_id: string | null;
-  role: string | null;
-  warmth_level: string;
-  last_contact_date: string | null;
-  notes: string | null;
-  contact_type: string;
-  is_archived: boolean;
-  archived_at: string | null;
-  connector_influence_company_ids: string[] | null;
-  recruiter_specialization: "industry_knowledge" | "interview_prep" | "offer_negotiation" | null;
-}
-
 interface Company {
   id: string;
   name: string;
@@ -59,14 +43,17 @@ interface Company {
 
 const Contacts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  
+  // Use cached contacts hook
+  const { contacts: contactsData, isLoading, refetch } = useContacts(showArchived);
+  const contacts = contactsData || [];
+  
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [contactTypeStep, setContactTypeStep] = useState(true);
   const [editContactId, setEditContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
   const [archiveContactId, setArchiveContactId] = useState<string | null>(null);
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [companySearchValue, setCompanySearchValue] = useState("");
@@ -98,35 +85,8 @@ const Contacts = () => {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    fetchContacts();
     fetchCompanies();
-  }, [showArchived]);
-
-  const fetchContacts = async () => {
-    setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("is_archived", showArchived)
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      const typedContacts: Contact[] = data.map(contact => ({
-        ...contact,
-        contact_type: contact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified",
-        recruiter_specialization: contact.recruiter_specialization as "industry_knowledge" | "interview_prep" | "offer_negotiation" | null,
-      }));
-      setContacts(typedContacts);
-    }
-    setIsLoading(false);
-  };
+  }, []);
 
   const fetchCompanies = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -222,7 +182,8 @@ const Contacts = () => {
       setIsOpen(false);
       setContactTypeStep(true);
       setFormData({ name: "", email: "", company: "", role: "", warmth_level: "cold", notes: "", contact_type: "unspecified", connector_influence_company_ids: [], recruiter_specialization: null });
-      fetchContacts();
+      invalidateContactsCache();
+      refetch();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -278,7 +239,8 @@ const Contacts = () => {
       });
 
       setDeleteContactId(null);
-      fetchContacts();
+      invalidateContactsCache();
+      refetch();
     } catch (error) {
       console.error("Failed to delete contact:", error);
       toast({
@@ -318,7 +280,8 @@ const Contacts = () => {
       });
 
       setArchiveContactId(null);
-      fetchContacts();
+      invalidateContactsCache();
+      refetch();
     } catch (error) {
       console.error("Failed to archive/restore contact:", error);
       toast({
@@ -876,7 +839,8 @@ const Contacts = () => {
           onOpenChange={(open) => !open && setEditContactId(null)}
           contactId={editContactId}
           onSuccess={() => {
-            fetchContacts();
+            invalidateContactsCache();
+            refetch();
             setEditContactId(null);
           }}
         />

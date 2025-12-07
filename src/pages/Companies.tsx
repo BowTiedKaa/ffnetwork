@@ -14,6 +14,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
 import { Switch } from "@/components/ui/switch";
+import { useCompanies, invalidateCompaniesCache, Company } from "@/hooks/useCompanies";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -22,17 +23,6 @@ const companySchema = z.object({
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
   priority: z.number().min(0, "Priority must be at least 0").max(5, "Priority must be at most 5"),
 });
-
-interface Company {
-  id: string;
-  name: string;
-  industry: string | null;
-  target_role: string | null;
-  notes: string | null;
-  priority: number;
-  is_archived: boolean;
-  archived_at: string | null;
-}
 
 interface Contact {
   id: string;
@@ -48,14 +38,17 @@ interface Contact {
 }
 
 const Companies = () => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
+  
+  // Use cached companies hook
+  const { companies: companiesData, isLoading, refetch } = useCompanies(showArchived);
+  const companies = companiesData || [];
+  
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
   const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
   const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
   const [archiveCompanyId, setArchiveCompanyId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -79,17 +72,17 @@ const Companies = () => {
 
     if (contactsError || !contacts || contacts.length === 0) return;
 
-    const { data: companies, error: companiesError } = await supabase
+    const { data: allCompanies, error: companiesError } = await supabase
       .from("companies")
       .select("id, name")
       .eq("user_id", user.id);
 
-    if (companiesError || !companies || companies.length === 0) return;
+    if (companiesError || !allCompanies || allCompanies.length === 0) return;
 
     const normalize = (name: string) => name.trim().toLowerCase();
     const companyMap = new Map<string, string>();
 
-    for (const c of companies) {
+    for (const c of allCompanies) {
       if (c.name) {
         companyMap.set(normalize(c.name), c.id);
       }
@@ -110,28 +103,8 @@ const Companies = () => {
   };
 
   useEffect(() => {
-    fetchCompanies();
-    backfillCompanyIdsForCurrentUser(); // Backfill company_id for older contacts
-  }, [showArchived]);
-
-  const fetchCompanies = async () => {
-    setIsLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("companies")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("is_archived", showArchived)
-      .order("priority", { ascending: false });
-
-    if (data) setCompanies(data);
-    setIsLoading(false);
-  };
+    backfillCompanyIdsForCurrentUser();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +139,8 @@ const Companies = () => {
 
       setIsOpen(false);
       setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0 });
-      fetchCompanies();
+      invalidateCompaniesCache();
+      refetch();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -273,7 +247,8 @@ const Companies = () => {
       setDeleteCompanyId(null);
       setSelectedCompany(null);
       setCompanyContacts([]);
-      fetchCompanies();
+      invalidateCompaniesCache();
+      refetch();
     } catch (error) {
       console.error("Failed to delete company:", error);
       toast({
@@ -315,7 +290,8 @@ const Companies = () => {
       setArchiveCompanyId(null);
       setSelectedCompany(null);
       setCompanyContacts([]);
-      fetchCompanies();
+      invalidateCompaniesCache();
+      refetch();
     } catch (error) {
       console.error("Failed to archive/restore company:", error);
       toast({
@@ -699,7 +675,8 @@ const Companies = () => {
           onOpenChange={(open) => !open && setEditCompanyId(null)}
           companyId={editCompanyId}
           onSuccess={() => {
-            fetchCompanies();
+            invalidateCompaniesCache();
+            refetch();
             setEditCompanyId(null);
           }}
         />
