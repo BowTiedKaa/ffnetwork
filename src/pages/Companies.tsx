@@ -22,6 +22,7 @@ const companySchema = z.object({
   target_role: z.string().trim().max(100, "Target role must be less than 100 characters").optional(),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
   priority: z.number().min(0, "Priority must be at least 0").max(5, "Priority must be at most 5"),
+  revenue_role: z.boolean({ required_error: "Please indicate whether this is a revenue role" }),
 });
 
 interface Contact {
@@ -56,6 +57,7 @@ const Companies = () => {
     target_role: "",
     notes: "",
     priority: 0,
+    revenue_role: null as boolean | null,
   });
   const { toast } = useToast();
 
@@ -112,6 +114,14 @@ const Companies = () => {
     if (!user) return;
 
     try {
+      if (formData.revenue_role === null) {
+        toast({
+          title: "Missing field",
+          description: "Please indicate whether this is a revenue-generating role.",
+          variant: "destructive",
+        });
+        return;
+      }
       const validatedData = companySchema.parse(formData);
 
       const { error } = await supabase.from("companies").insert({
@@ -121,6 +131,7 @@ const Companies = () => {
         target_role: validatedData.target_role || null,
         notes: validatedData.notes || null,
         priority: validatedData.priority,
+        revenue_role: validatedData.revenue_role,
       });
 
       if (error) {
@@ -138,7 +149,7 @@ const Companies = () => {
       });
 
       setIsOpen(false);
-      setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0 });
+      setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0, revenue_role: null });
       invalidateCompaniesCache();
       refetch();
     } catch (error) {
