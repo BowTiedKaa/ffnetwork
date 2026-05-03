@@ -11,6 +11,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Plus } from "lucide-react";
+import { format } from "date-fns";
 
 interface AdminUser {
   id: string;
@@ -26,6 +34,16 @@ const Admin = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  // Codes state
+  const [codes, setCodes] = useState<any[]>([]);
+  const [codesLoading, setCodesLoading] = useState(true);
+  const [genOpen, setGenOpen] = useState(false);
+  const [genDuration, setGenDuration] = useState<"1" | "6" | "12">("1");
+  const [genCount, setGenCount] = useState(5);
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState<string[]>([]);
+  const [usedByMap, setUsedByMap] = useState<Record<string, string>>({});
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -66,7 +84,66 @@ const Admin = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchCodes();
   }, []);
+
+  const fetchCodes = async () => {
+    setCodesLoading(true);
+    const { data, error } = await supabase
+      .from("access_codes")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast({ title: "Failed to load codes", description: error.message, variant: "destructive" });
+      setCodesLoading(false);
+      return;
+    }
+    setCodes(data || []);
+    // Look up emails for used codes
+    const userIds = Array.from(new Set((data || []).map((c) => c.used_by).filter(Boolean))) as string[];
+    if (userIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", userIds);
+      const map: Record<string, string> = {};
+      (profs || []).forEach((p) => { map[p.id] = p.email || ""; });
+      setUsedByMap(map);
+    }
+    setCodesLoading(false);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setGenerated([]);
+    const { data, error } = await supabase.rpc("generate_access_codes", {
+      _count: genCount,
+      _duration_months: parseInt(genDuration),
+    });
+    setGenerating(false);
+    if (error) {
+      toast({ title: "Failed to generate codes", description: error.message, variant: "destructive" });
+      return;
+    }
+    const list = (data as string[]) || [];
+    setGenerated(list);
+    fetchCodes();
+  };
+
+  const toggleCodeActive = async (id: string, value: boolean) => {
+    setCodes((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: value } : c)));
+    const { error } = await supabase.from("access_codes").update({ is_active: value }).eq("id", id);
+    if (error) {
+      toast({ title: "Failed to update", description: error.message, variant: "destructive" });
+      fetchCodes();
+    }
+  };
+
+  const codeStatus = (c: any): { label: string; variant: "default" | "secondary" | "outline" | "destructive" } => {
+    if (!c.is_active) return { label: "inactive", variant: "destructive" };
+    if (c.used_by) return { label: "used", variant: "secondary" };
+    return { label: "unused", variant: "outline" };
+  };
 
   const toggleApproved = async (user: AdminUser, value: boolean) => {
     setUsers((prev) =>
@@ -115,9 +192,16 @@ const Admin = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Admin</h1>
-        <p className="text-muted-foreground">Manage user access and roles.</p>
+        <p className="text-muted-foreground">Manage users, roles, and access codes.</p>
       </div>
 
+      <Tabs defaultValue="users">
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="codes">Codes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-4 mt-4">
       <Input
         placeholder="Search by email…"
         value={search}
@@ -177,6 +261,105 @@ const Admin = () => {
           </TableBody>
         </Table>
       </div>
+        </TabsContent>
+
+        <TabsContent value="codes" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Button onClick={() => { setGenerated([]); setGenOpen(true); }} className="gap-2">
+              <Plus className="h-4 w-4" /> Generate Codes
+            </Button>
+          </div>
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Used by</TableHead>
+                  <TableHead>Date used</TableHead>
+                  <TableHead className="text-center">Active</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {codesLoading ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading…</TableCell></TableRow>
+                ) : codes.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No codes yet.</TableCell></TableRow>
+                ) : codes.map((c) => {
+                  const s = codeStatus(c);
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-mono">{c.code}</TableCell>
+                      <TableCell>{c.duration_months} mo</TableCell>
+                      <TableCell><Badge variant={s.variant}>{s.label}</Badge></TableCell>
+                      <TableCell className="text-sm">{c.used_by ? (usedByMap[c.used_by] || c.used_by) : "—"}</TableCell>
+                      <TableCell className="text-sm">{c.used_at ? format(new Date(c.used_at), "MMM d, yyyy") : "—"}</TableCell>
+                      <TableCell className="text-center">
+                        <Switch checked={c.is_active} onCheckedChange={(v) => toggleCodeActive(c.id, v)} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Access Codes</DialogTitle>
+          </DialogHeader>
+          {generated.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Generated {generated.length} codes. Copy them now:</p>
+              <div className="border rounded-md bg-muted/40 p-3 font-mono text-sm space-y-1 max-h-64 overflow-auto">
+                {generated.map((c) => <div key={c}>{c}</div>)}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generated.join("\n"));
+                    toast({ title: "Copied", description: "All codes copied to clipboard." });
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> Copy All
+                </Button>
+                <Button onClick={() => { setGenOpen(false); setGenerated([]); }}>Done</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Duration</Label>
+                <Select value={genDuration} onValueChange={(v) => setGenDuration(v as "1" | "6" | "12")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 month</SelectItem>
+                    <SelectItem value="6">6 months</SelectItem>
+                    <SelectItem value="12">12 months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Number of codes (1-50)</Label>
+                <Input
+                  type="number" min={1} max={50}
+                  value={genCount}
+                  onChange={(e) => setGenCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                />
+              </div>
+              <Button onClick={handleGenerate} disabled={generating} className="w-full">
+                {generating ? "Generating…" : "Generate"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

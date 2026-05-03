@@ -4,7 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Copy, Sparkles } from "lucide-react";
+import { Mail, Copy, Sparkles, Lock } from "lucide-react";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { RedeemCodeDialog } from "@/components/RedeemCodeDialog";
 
 interface SendMessageDialogProps {
   open: boolean;
@@ -28,6 +30,9 @@ export const SendMessageDialog = ({
   contactNotes,
 }: SendMessageDialogProps) => {
   const { toast } = useToast();
+  const [userId, setUserId] = useState<string | null>(null);
+  const { isPro } = useUserAccess(userId);
+  const [redeemOpen, setRedeemOpen] = useState(false);
   const [profile, setProfile] = useState<{ agency: string; years_of_service: string; target_role_seeking: string }>({
     agency: "",
     years_of_service: "",
@@ -41,6 +46,7 @@ export const SendMessageDialog = ({
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
       const { data } = await supabase
         .from("profiles")
         .select("agency, years_of_service, target_role_seeking")
@@ -84,6 +90,10 @@ export const SendMessageDialog = ({
   }, [contactName, companyName, contactType, targetRole, profile]);
 
   const handleAiDraft = async () => {
+    if (!isPro) {
+      setRedeemOpen(true);
+      return;
+    }
     setAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("draft-message", {
@@ -176,8 +186,8 @@ export const SendMessageDialog = ({
               disabled={aiLoading}
               className="gap-2"
             >
-              <Sparkles className="h-4 w-4" />
-              {aiLoading ? "Generating…" : "AI Draft"}
+              {isPro ? <Sparkles className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {aiLoading ? "Generating…" : isPro ? "AI Draft" : "AI Draft (Pro)"}
             </Button>
           </div>
 
@@ -197,6 +207,7 @@ export const SendMessageDialog = ({
             </Button>
           </div>
         </div>
+        <RedeemCodeDialog open={redeemOpen} onOpenChange={setRedeemOpen} />
       </DialogContent>
     </Dialog>
   );

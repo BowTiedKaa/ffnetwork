@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_codes: {
+        Row: {
+          code: string
+          created_at: string
+          duration_months: number
+          id: string
+          is_active: boolean
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          duration_months: number
+          id?: string
+          is_active?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           archived_at: string | null
@@ -304,6 +334,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_code_used: string | null
           agency: string | null
           created_at: string | null
           email: string | null
@@ -312,9 +343,12 @@ export type Database = {
           is_approved: boolean
           pitch: string | null
           target_role_seeking: string | null
+          tier: string
+          tier_expires_at: string | null
           years_of_service: string | null
         }
         Insert: {
+          access_code_used?: string | null
           agency?: string | null
           created_at?: string | null
           email?: string | null
@@ -323,9 +357,12 @@ export type Database = {
           is_approved?: boolean
           pitch?: string | null
           target_role_seeking?: string | null
+          tier?: string
+          tier_expires_at?: string | null
           years_of_service?: string | null
         }
         Update: {
+          access_code_used?: string | null
           agency?: string | null
           created_at?: string | null
           email?: string | null
@@ -334,6 +371,8 @@ export type Database = {
           is_approved?: boolean
           pitch?: string | null
           target_role_seeking?: string | null
+          tier?: string
+          tier_expires_at?: string | null
           years_of_service?: string | null
         }
         Relationships: []
@@ -394,6 +433,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_access_codes: {
+        Args: { _count: number; _duration_months: number }
+        Returns: string[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -401,6 +444,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      redeem_access_code: { Args: { _code: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -7,9 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 
 const PitchBuilder = () => {
   const [userId, setUserId] = useState<string | null>(null);
+  const { isPro, loading: accessLoading } = useUserAccess(userId);
   const [agency, setAgency] = useState("");
   const [years, setYears] = useState("");
   const [achievement, setAchievement] = useState("");
@@ -71,6 +74,10 @@ const PitchBuilder = () => {
         <p className="text-muted-foreground">Build the pitch you'll use in every conversation.</p>
       </div>
 
+      {!accessLoading && !isPro ? (
+        <UpgradePrompt title="Pitch Builder is a Pro feature." />
+      ) : (
+        <>
       <Card className="p-6 bg-amber-50 border-amber-200">
         <h2 className="text-lg font-semibold text-amber-900">The 4-Sentence Formula</h2>
         <ol className="mt-3 space-y-2 text-sm text-amber-900 list-decimal list-inside">
@@ -126,6 +133,8 @@ const PitchBuilder = () => {
             Practice this 10 times out loud. Time it. Test it on a Trailblazer first.
           </p>
         </Card>
+      )}
+        </>
       )}
     </div>
   );

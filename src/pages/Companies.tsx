@@ -15,6 +15,9 @@ import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
 import { Switch } from "@/components/ui/switch";
 import { useCompanies, invalidateCompaniesCache, Company } from "@/hooks/useCompanies";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { Lock } from "lucide-react";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -40,6 +43,12 @@ interface Contact {
 
 const Companies = () => {
   const [showArchived, setShowArchived] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { isPro, loading: accessLoading } = useUserAccess(currentUserId);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUserId(user?.id || null));
+  }, []);
   
   // Use cached companies hook
   const { companies: companiesData, isLoading, refetch } = useCompanies(showArchived);
@@ -112,6 +121,13 @@ const Companies = () => {
     e.preventDefault();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    const activeCount = companies.filter((c) => !c.is_archived).length;
+    if (!isPro && activeCount >= 3) {
+      toast({ title: "Free tier limit", description: "Upgrade to Pro to add more companies.", variant: "destructive" });
+      setIsOpen(false);
+      return;
+    }
 
     try {
       if (formData.revenue_role === null) {
@@ -388,6 +404,9 @@ const Companies = () => {
 
   return (
     <div className="space-y-6">
+      {!accessLoading && !isPro && companies.filter((c) => !c.is_archived).length >= 3 && (
+        <UpgradePrompt title="You've hit the 3-company free limit." />
+      )}
       <div className="rounded-md border-l-4 border-primary bg-muted/40 p-4 text-sm">
         <strong>Revenue roles:</strong> BD, Sales, AE, Customer Success, Strategic Partnerships.{" "}
         <strong>Cost centers:</strong> Policy, Compliance, Security, Legal — these get cut first.
@@ -411,8 +430,15 @@ const Companies = () => {
           </div>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button
+              className="gap-2"
+              disabled={!isPro && companies.filter((c) => !c.is_archived).length >= 3}
+            >
+              {!isPro && companies.filter((c) => !c.is_archived).length >= 3 ? (
+                <Lock className="h-4 w-4" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Add Company
             </Button>
           </DialogTrigger>

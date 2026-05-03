@@ -6,7 +6,9 @@ import { User, Session } from "@supabase/supabase-js";
 import { Home, Users, Building2, Calendar, LogOut, HelpCircle, Shield, Sparkles } from "lucide-react";
 import { SimpleOnboarding } from "@/components/SimpleOnboarding";
 import { useUserAccess } from "@/hooks/useUserAccess";
-import PendingAccess from "@/pages/PendingAccess";
+import { RedeemCodeDialog } from "@/components/RedeemCodeDialog";
+import { Badge } from "@/components/ui/badge";
+import { KeyRound, Crown } from "lucide-react";
 import logo from "@/assets/former-fed-logo.jpg";
 
 interface LayoutProps {
@@ -20,7 +22,8 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
   const [showOnboardingReplay, setShowOnboardingReplay] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading: accessLoading, isApproved, isAdmin } = useUserAccess(user?.id);
+  const { loading: accessLoading, isAdmin, isPro } = useUserAccess(user?.id);
+  const [redeemOpen, setRedeemOpen] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -80,10 +83,6 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
     );
   }
 
-  if (!isApproved) {
-    return <PendingAccess />;
-  }
-
   if (requireAdmin && !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
@@ -127,6 +126,21 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {isPro ? (
+                <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-900 border-amber-200">
+                  <Crown className="h-3 w-3" /> Pro
+                </Badge>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRedeemOpen(true)}
+                  className="gap-2"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  <span className="hidden sm:inline">Redeem code</span>
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -145,6 +159,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
         </div>
       </nav>
       <main className="container mx-auto px-4 py-8">{children}</main>
+      <RedeemCodeDialog open={redeemOpen} onOpenChange={setRedeemOpen} />
     </div>
   );
 };

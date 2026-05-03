@@ -26,6 +26,9 @@ import { useContacts, invalidateContactsCache, Contact } from "@/hooks/useContac
 import { CONTACT_COACHING, ContactType } from "@/lib/contactCoaching";
 import { CallPrepDialog } from "@/components/CallPrepDialog";
 import { ClipboardList } from "lucide-react";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { Lock } from "lucide-react";
 
 const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 
@@ -47,6 +50,8 @@ interface Company {
 const Contacts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showArchived, setShowArchived] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { isPro, loading: accessLoading } = useUserAccess(currentUserId);
   
   // Use cached contacts hook
   const { contacts: contactsData, isLoading, refetch } = useContacts(showArchived);
@@ -90,6 +95,7 @@ const Contacts = () => {
 
   useEffect(() => {
     fetchCompanies();
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUserId(user?.id || null));
   }, []);
 
   const fetchCompanies = async () => {
@@ -114,6 +120,13 @@ const Contacts = () => {
     e.preventDefault();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    const activeCount = contacts.filter((c) => !c.is_archived).length;
+    if (!isPro && activeCount >= 5) {
+      toast({ title: "Free tier limit", description: "Upgrade to Pro to add more contacts.", variant: "destructive" });
+      setIsOpen(false);
+      return;
+    }
 
     try {
       const validatedData = contactSchema.parse(formData);
@@ -393,6 +406,9 @@ const Contacts = () => {
 
   return (
     <div className="space-y-6">
+      {!accessLoading && !isPro && contacts.filter((c) => !c.is_archived).length >= 5 && (
+        <UpgradePrompt title="You've hit the 5-contact free limit." />
+      )}
       <div className="flex justify-between items-center">
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">Contacts</h1>
@@ -410,8 +426,16 @@ const Contacts = () => {
             </Label>
           </div>
           <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-          <Button onClick={() => setIsOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
+          <Button
+            onClick={() => setIsOpen(true)}
+            className="gap-2"
+            disabled={!isPro && contacts.filter((c) => !c.is_archived).length >= 5}
+          >
+            {!isPro && contacts.filter((c) => !c.is_archived).length >= 5 ? (
+              <Lock className="h-4 w-4" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             Add Contact
           </Button>
           <DialogContent className="max-w-md">
@@ -745,9 +769,9 @@ const Contacts = () => {
                         size="icon"
                         variant="ghost"
                         title="Call prep"
-                        onClick={() => setCallPrepContact(contact)}
+                        onClick={() => isPro ? setCallPrepContact(contact) : toast({ title: "Pro feature", description: "Call Prep is a Pro feature. Redeem an access code to unlock." })}
                       >
-                        <ClipboardList className="h-4 w-4" />
+                        {isPro ? <ClipboardList className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                       </Button>
                       <Button
                         size="icon"
@@ -808,10 +832,10 @@ const Contacts = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCallPrepContact(contact)}
+                          onClick={() => isPro ? setCallPrepContact(contact) : toast({ title: "Pro feature", description: "Call Prep is a Pro feature. Redeem an access code to unlock." })}
                           className="gap-1 h-7 text-xs"
                         >
-                          <ClipboardList className="h-3 w-3" />
+                          {isPro ? <ClipboardList className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                           Call Prep
                         </Button>
                         {getSuggestedActions(contact).map((action, idx) => (
