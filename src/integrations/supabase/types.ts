@@ -304,25 +304,34 @@ export type Database = {
       }
       profiles: {
         Row: {
+          agency: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
           is_approved: boolean
+          target_role_seeking: string | null
+          years_of_service: string | null
         }
         Insert: {
+          agency?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           is_approved?: boolean
+          target_role_seeking?: string | null
+          years_of_service?: string | null
         }
         Update: {
+          agency?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           is_approved?: boolean
+          target_role_seeking?: string | null
+          years_of_service?: string | null
         }
         Relationships: []
       }
