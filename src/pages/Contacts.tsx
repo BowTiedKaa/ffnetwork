@@ -26,6 +26,9 @@ import { useContacts, invalidateContactsCache, Contact } from "@/hooks/useContac
 import { CONTACT_COACHING, ContactType } from "@/lib/contactCoaching";
 import { CallPrepDialog } from "@/components/CallPrepDialog";
 import { ClipboardList } from "lucide-react";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { Lock } from "lucide-react";
 
 const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 
@@ -47,6 +50,8 @@ interface Company {
 const Contacts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showArchived, setShowArchived] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { isPro, loading: accessLoading } = useUserAccess(currentUserId);
   
   // Use cached contacts hook
   const { contacts: contactsData, isLoading, refetch } = useContacts(showArchived);
@@ -90,6 +95,7 @@ const Contacts = () => {
 
   useEffect(() => {
     fetchCompanies();
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUserId(user?.id || null));
   }, []);
 
   const fetchCompanies = async () => {
