@@ -439,7 +439,37 @@ const Companies = () => {
                   id="target_role"
                   value={formData.target_role}
                   onChange={(e) => setFormData({ ...formData, target_role: e.target.value })}
+                  placeholder="e.g. Account Executive"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Is this a revenue-generating role? *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Yes: BD, Sales, Account Executive, Customer Success, Strategic Partnerships, Sales Engineering. No: Policy, Compliance, Security, Legal.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.revenue_role === true ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setFormData({ ...formData, revenue_role: true })}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.revenue_role === false ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setFormData({ ...formData, revenue_role: false })}
+                  >
+                    No
+                  </Button>
+                </div>
+                {formData.revenue_role === false && (
+                  <div className="rounded-md border border-yellow-400 bg-yellow-50 p-3 text-sm text-yellow-900">
+                    Cost-center roles get cut first and cap your earning potential. Consider targeting a revenue-adjacent role at this company instead.
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority (0-5)</Label>
