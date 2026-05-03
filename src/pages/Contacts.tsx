@@ -23,6 +23,9 @@ import { EditContactDialog } from "@/components/EditContactDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { format } from "date-fns";
 import { useContacts, invalidateContactsCache, Contact } from "@/hooks/useContacts";
+import { CONTACT_COACHING, ContactType } from "@/lib/contactCoaching";
+import { CallPrepDialog } from "@/components/CallPrepDialog";
+import { ClipboardList } from "lucide-react";
 
 const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 
@@ -59,6 +62,7 @@ const Contacts = () => {
   const [companySearchValue, setCompanySearchValue] = useState("");
   const [selectedContactForMessage, setSelectedContactForMessage] = useState<Contact | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [callPrepContact, setCallPrepContact] = useState<Contact | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
