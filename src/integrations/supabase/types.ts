@@ -310,6 +310,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_approved: boolean
+          pitch: string | null
           target_role_seeking: string | null
           years_of_service: string | null
         }
@@ -320,6 +321,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_approved?: boolean
+          pitch?: string | null
           target_role_seeking?: string | null
           years_of_service?: string | null
         }
@@ -330,6 +332,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_approved?: boolean
+          pitch?: string | null
           target_role_seeking?: string | null
           years_of_service?: string | null
         }
