@@ -627,6 +627,19 @@ const Contacts = () => {
                   </Button>
                   <Button type="submit" className="flex-1">Add Contact</Button>
                 </div>
+              {(() => {
+                const meta = CONTACT_COACHING[formData.contact_type as ContactType];
+                return (
+                  <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-2">
+                    <p className="font-semibold">Your call prep for this {meta.label}</p>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      {meta.callPrep.map((line, i) => (
+                        <li key={i}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
               </form>
             )}
           </DialogContent>
