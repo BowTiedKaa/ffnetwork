@@ -15,6 +15,9 @@ import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
 import { Switch } from "@/components/ui/switch";
 import { useCompanies, invalidateCompaniesCache, Company } from "@/hooks/useCompanies";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { Lock } from "lucide-react";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Company name is required").max(100, "Company name must be less than 100 characters"),
@@ -40,6 +43,12 @@ interface Contact {
 
 const Companies = () => {
   const [showArchived, setShowArchived] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { isPro, loading: accessLoading } = useUserAccess(currentUserId);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUserId(user?.id || null));
+  }, []);
   
   // Use cached companies hook
   const { companies: companiesData, isLoading, refetch } = useCompanies(showArchived);
