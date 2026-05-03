@@ -17,6 +17,7 @@ import { BadgeSystem } from "@/components/BadgeSystem";
 import { OfferMomentumMeter } from "@/components/OfferMomentumMeter";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProfileSettings } from "@/components/ProfileSettings";
 
 const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 const TODAY_ACTIONS_CACHE_KEY = "ffn_today_actions_cache";
@@ -524,6 +525,8 @@ const Dashboard = () => {
             FF Network helps you stay organized with the people who matter and track your warm paths into companies so you can maintain consistent outreach.
           </p>
         </div>
+
+        <ProfileSettings />
 
         <div className="flex justify-between items-start">
           <div>
