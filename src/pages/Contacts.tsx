@@ -406,6 +406,9 @@ const Contacts = () => {
 
   return (
     <div className="space-y-6">
+      {!accessLoading && !isPro && contacts.filter((c) => !c.is_archived).length >= 5 && (
+        <UpgradePrompt title="You've hit the 5-contact free limit." />
+      )}
       <div className="flex justify-between items-center">
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">Contacts</h1>
