@@ -769,9 +769,9 @@ const Contacts = () => {
                         size="icon"
                         variant="ghost"
                         title="Call prep"
-                        onClick={() => setCallPrepContact(contact)}
+                        onClick={() => isPro ? setCallPrepContact(contact) : toast({ title: "Pro feature", description: "Call Prep is a Pro feature. Redeem an access code to unlock." })}
                       >
-                        <ClipboardList className="h-4 w-4" />
+                        {isPro ? <ClipboardList className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                       </Button>
                       <Button
                         size="icon"
@@ -832,10 +832,10 @@ const Contacts = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCallPrepContact(contact)}
+                          onClick={() => isPro ? setCallPrepContact(contact) : toast({ title: "Pro feature", description: "Call Prep is a Pro feature. Redeem an access code to unlock." })}
                           className="gap-1 h-7 text-xs"
                         >
-                          <ClipboardList className="h-3 w-3" />
+                          {isPro ? <ClipboardList className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                           Call Prep
                         </Button>
                         {getSuggestedActions(contact).map((action, idx) => (
