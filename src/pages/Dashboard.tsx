@@ -817,6 +817,7 @@ const Dashboard = () => {
               selectedContact.company && c.name.toLowerCase() === selectedContact.company.toLowerCase()
             )?.target_role || selectedContact.role
           }
+          contactNotes={(selectedContact as any).notes ?? null}
         />
       )}
       </div>
