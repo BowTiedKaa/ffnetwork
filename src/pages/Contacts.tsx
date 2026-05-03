@@ -426,8 +426,16 @@ const Contacts = () => {
             </Label>
           </div>
           <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-          <Button onClick={() => setIsOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
+          <Button
+            onClick={() => setIsOpen(true)}
+            className="gap-2"
+            disabled={!isPro && contacts.filter((c) => !c.is_archived).length >= 5}
+          >
+            {!isPro && contacts.filter((c) => !c.is_archived).length >= 5 ? (
+              <Lock className="h-4 w-4" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             Add Contact
           </Button>
           <DialogContent className="max-w-md">
