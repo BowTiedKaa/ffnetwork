@@ -430,8 +430,15 @@ const Companies = () => {
           </div>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button
+              className="gap-2"
+              disabled={!isPro && companies.filter((c) => !c.is_archived).length >= 3}
+            >
+              {!isPro && companies.filter((c) => !c.is_archived).length >= 3 ? (
+                <Lock className="h-4 w-4" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Add Company
             </Button>
           </DialogTrigger>
