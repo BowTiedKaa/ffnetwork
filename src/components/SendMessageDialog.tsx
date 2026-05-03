@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Copy } from "lucide-react";
+import { Mail, Copy, Sparkles } from "lucide-react";
 
 interface SendMessageDialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface SendMessageDialogProps {
   companyName?: string | null;
   contactType?: "connector" | "trailblazer" | "reliable_recruiter" | "unspecified" | null;
   targetRole?: string | null;
+  contactNotes?: string | null;
 }
 
 export const SendMessageDialog = ({
@@ -23,74 +25,97 @@ export const SendMessageDialog = ({
   companyName,
   contactType = "unspecified",
   targetRole,
+  contactNotes,
 }: SendMessageDialogProps) => {
   const { toast } = useToast();
-  
+  const [profile, setProfile] = useState<{ agency: string; years_of_service: string; target_role_seeking: string }>({
+    agency: "",
+    years_of_service: "",
+    target_role_seeking: "",
+  });
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // Load user background once when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("agency, years_of_service, target_role_seeking")
+        .eq("id", user.id)
+        .maybeSingle();
+      setProfile({
+        agency: data?.agency || "",
+        years_of_service: data?.years_of_service || "",
+        target_role_seeking: data?.target_role_seeking || "",
+      });
+    })();
+  }, [open]);
+
   const getMessageTemplate = () => {
     const firstName = contactName.split(" ")[0] || "there";
-    
-    // Build role/team phrase with graceful fallback
-    const roleTeamPhrase = targetRole && companyName
-      ? `the ${targetRole} at ${companyName}`
-      : targetRole
-      ? `the ${targetRole}`
-      : companyName
-      ? `the team at ${companyName}`
-      : "the role we've talked about";
-    
-    // Fallback phrases for missing company
-    const companyPhrase = companyName || "your team";
-    
+    const years = profile.years_of_service || "[years]";
+    const agency = profile.agency || "[agency]";
+    const target = profile.target_role_seeking || "[target role]";
+    const company = companyName || "your company";
+
     switch (contactType) {
       case "connector":
-        return `Hi ${firstName},
+        return `Hi ${firstName}, I came across your profile and noticed your connection to ${company}. I've spent ${years} years at ${agency} and I'm targeting ${target} in tech. Would you be open to a 15-minute call? I'd love your perspective on where someone with my background fits and whether you'd be open to any introductions. Best,`;
 
-Do you have 15–20 minutes sometime next week? I'd like to talk about ${roleTeamPhrase} and get your view on who I should be speaking with.
-
-Best,
-[Your name]`;
-      
       case "trailblazer":
-        return `Hi ${firstName},
+        return `Hi ${firstName}, I saw your background at ${company} and wanted to connect. I've spent ${years} years at ${agency} focused on [initiative]. I'm now targeting ${target} in tech. Would you be open to a 15-minute call? I'd like to hear how you navigated the transition and what you'd do differently. Best,`;
 
-Do you have 15–20 minutes sometime next week? I'm looking at ${roleTeamPhrase} and would like to hear how you handled your own move and what you would focus on early.
+      case "reliable_recruiter":
+        return `Hi ${firstName}, I'm a federal employee with ${years} years at ${agency} transitioning into ${target} in tech. Would you have 15 minutes to discuss what your clients are looking for right now? I'd value your perspective on how to position my background. Best,`;
 
-Best,
-[Your name]`;
-      
-      case "reliable_recruiter": {
-        const recruiterPhrase = targetRole && companyName
-          ? `the ${targetRole} at ${companyName}`
-          : targetRole
-          ? `this type of role`
-          : companyName
-          ? `the team at ${companyName}`
-          : "this type of role";
-        
-        return `Hi ${firstName},
-
-Are you available for 15–20 minutes sometime next week? I'm preparing for ${recruiterPhrase} and would value your view on how this team evaluates candidates and where people most often get stuck.
-
-Best,
-[Your name]`;
-      }
-      
-      default: // unspecified or null
-        return `Hi ${firstName},
-
-Do you have 15–20 minutes sometime next week? I'm exploring ${roleTeamPhrase} and would value your perspective.
-
-Best,
-[Your name]`;
+      default:
+        return `Hi ${firstName}, I've spent ${years} years at ${agency} and I'm targeting ${target} in tech. Would you be open to a 15-minute call? Best,`;
     }
   };
 
   const [message, setMessage] = useState("");
 
-  // Regenerate message whenever contact props change
   useEffect(() => {
     setMessage(getMessageTemplate());
-  }, [contactName, companyName, contactType, targetRole]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactName, companyName, contactType, targetRole, profile]);
+
+  const handleAiDraft = async () => {
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("draft-message", {
+        body: {
+          contactType: contactType || "unspecified",
+          contactName,
+          companyName,
+          contactNotes,
+          agency: profile.agency,
+          yearsOfService: profile.years_of_service,
+          targetRole: profile.target_role_seeking,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const generated = (data as any)?.message?.trim();
+      if (generated) {
+        setMessage(generated);
+        toast({ title: "AI draft ready", description: "Edit before sending." });
+      } else {
+        toast({ title: "No draft returned", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({
+        title: "AI draft failed",
+        description: e instanceof Error ? e.message : "Try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -141,6 +166,20 @@ Best,
             rows={8}
             className="font-mono text-sm"
           />
+
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAiDraft}
+              disabled={aiLoading}
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              {aiLoading ? "Generating…" : "AI Draft"}
+            </Button>
+          </div>
 
           <div className="flex gap-2 justify-end">
             {contactEmail && (

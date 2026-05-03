@@ -900,6 +900,7 @@ const Contacts = () => {
           companyName={selectedContactForMessage.company}
           contactType={selectedContactForMessage.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified"}
           targetRole={selectedContactForMessage.role}
+          contactNotes={selectedContactForMessage.notes}
         />
       )}
       {callPrepContact && (
