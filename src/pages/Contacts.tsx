@@ -621,12 +621,6 @@ const Contacts = () => {
                 </div>
               )}
 
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setContactTypeStep(true)} className="flex-1">
-                    Back
-                  </Button>
-                  <Button type="submit" className="flex-1">Add Contact</Button>
-                </div>
               {(() => {
                 const meta = CONTACT_COACHING[formData.contact_type as ContactType];
                 return (
@@ -640,6 +634,12 @@ const Contacts = () => {
                   </div>
                 );
               })()}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setContactTypeStep(true)} className="flex-1">
+                    Back
+                  </Button>
+                  <Button type="submit" className="flex-1">Add Contact</Button>
+                </div>
               </form>
             )}
           </DialogContent>
