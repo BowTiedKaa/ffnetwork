@@ -122,6 +122,13 @@ const Companies = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const activeCount = companies.filter((c) => !c.is_archived).length;
+    if (!isPro && activeCount >= 3) {
+      toast({ title: "Free tier limit", description: "Upgrade to Pro to add more companies.", variant: "destructive" });
+      setIsOpen(false);
+      return;
+    }
+
     try {
       if (formData.revenue_role === null) {
         toast({
@@ -397,6 +404,9 @@ const Companies = () => {
 
   return (
     <div className="space-y-6">
+      {!accessLoading && !isPro && companies.filter((c) => !c.is_archived).length >= 3 && (
+        <UpgradePrompt title="You've hit the 3-company free limit." />
+      )}
       <div className="rounded-md border-l-4 border-primary bg-muted/40 p-4 text-sm">
         <strong>Revenue roles:</strong> BD, Sales, AE, Customer Success, Strategic Partnerships.{" "}
         <strong>Cost centers:</strong> Policy, Compliance, Security, Legal — these get cut first.
