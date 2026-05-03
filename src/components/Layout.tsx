@@ -3,20 +3,24 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { User, Session } from "@supabase/supabase-js";
-import { Home, Users, Building2, Calendar, LogOut, HelpCircle } from "lucide-react";
+import { Home, Users, Building2, Calendar, LogOut, HelpCircle, Shield } from "lucide-react";
 import { SimpleOnboarding } from "@/components/SimpleOnboarding";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import PendingAccess from "@/pages/PendingAccess";
 import logo from "@/assets/former-fed-logo.jpg";
 
 interface LayoutProps {
   children: ReactNode;
+  requireAdmin?: boolean;
 }
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [showOnboardingReplay, setShowOnboardingReplay] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { loading: accessLoading, isApproved, isAdmin } = useUserAccess(user?.id);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -60,10 +64,31 @@ const Layout = ({ children }: LayoutProps) => {
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/companies", label: "Companies", icon: Building2 },
     { path: "/follow-ups", label: "Follow-ups", icon: Calendar },
+    ...(isAdmin ? [{ path: "/admin", label: "Admin", icon: Shield }] : []),
   ];
 
   if (!user) {
     return <>{children}</>;
+  }
+
+  if (accessLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!isApproved) {
+    return <PendingAccess />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Not authorized.
+      </div>
+    );
   }
 
   return (
