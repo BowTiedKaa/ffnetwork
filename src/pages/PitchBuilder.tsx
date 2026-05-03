@@ -7,9 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 
 const PitchBuilder = () => {
   const [userId, setUserId] = useState<string | null>(null);
+  const { isPro, loading: accessLoading } = useUserAccess(userId);
   const [agency, setAgency] = useState("");
   const [years, setYears] = useState("");
   const [achievement, setAchievement] = useState("");
