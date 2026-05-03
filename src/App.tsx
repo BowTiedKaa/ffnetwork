@@ -12,6 +12,8 @@ import Companies from "./pages/Companies";
 import FollowUps from "./pages/FollowUps";
 import PitchBuilder from "./pages/PitchBuilder";
 import Admin from "./pages/Admin";
+import Pricing from "./pages/Pricing";
+import CheckoutReturn from "./pages/CheckoutReturn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +73,22 @@ const App = () => (
             element={
               <Layout requireAdmin>
                 <Admin />
+              </Layout>
+            }
+          />
+          <Route
+            path="/pricing"
+            element={
+              <Layout>
+                <Pricing />
+              </Layout>
+            }
+          />
+          <Route
+            path="/checkout/return"
+            element={
+              <Layout>
+                <CheckoutReturn />
               </Layout>
             }
           />
