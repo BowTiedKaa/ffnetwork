@@ -8,6 +8,7 @@ export interface Company {
   target_role: string | null;
   notes: string | null;
   priority: number;
+  revenue_role: boolean | null;
   is_archived: boolean;
   archived_at: string | null;
   created_at: string | null;

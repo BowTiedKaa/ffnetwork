@@ -24,6 +24,7 @@ export type Database = {
           name: string
           notes: string | null
           priority: number | null
+          revenue_role: boolean | null
           target_role: string | null
           user_id: string
         }
@@ -36,6 +37,7 @@ export type Database = {
           name: string
           notes?: string | null
           priority?: number | null
+          revenue_role?: boolean | null
           target_role?: string | null
           user_id: string
         }
@@ -48,6 +50,7 @@ export type Database = {
           name?: string
           notes?: string | null
           priority?: number | null
+          revenue_role?: boolean | null
           target_role?: string | null
           user_id?: string
         }

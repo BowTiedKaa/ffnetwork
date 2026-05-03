@@ -22,6 +22,7 @@ const companySchema = z.object({
   target_role: z.string().trim().max(100, "Target role must be less than 100 characters").optional(),
   notes: z.string().trim().max(1000, "Notes must be less than 1000 characters").optional(),
   priority: z.number().min(0, "Priority must be at least 0").max(5, "Priority must be at most 5"),
+  revenue_role: z.boolean({ required_error: "Please indicate whether this is a revenue role" }),
 });
 
 interface Contact {
@@ -56,6 +57,7 @@ const Companies = () => {
     target_role: "",
     notes: "",
     priority: 0,
+    revenue_role: null as boolean | null,
   });
   const { toast } = useToast();
 
@@ -112,6 +114,14 @@ const Companies = () => {
     if (!user) return;
 
     try {
+      if (formData.revenue_role === null) {
+        toast({
+          title: "Missing field",
+          description: "Please indicate whether this is a revenue-generating role.",
+          variant: "destructive",
+        });
+        return;
+      }
       const validatedData = companySchema.parse(formData);
 
       const { error } = await supabase.from("companies").insert({
@@ -121,6 +131,7 @@ const Companies = () => {
         target_role: validatedData.target_role || null,
         notes: validatedData.notes || null,
         priority: validatedData.priority,
+        revenue_role: validatedData.revenue_role,
       });
 
       if (error) {
@@ -138,7 +149,7 @@ const Companies = () => {
       });
 
       setIsOpen(false);
-      setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0 });
+      setFormData({ name: "", industry: "", target_role: "", notes: "", priority: 0, revenue_role: null });
       invalidateCompaniesCache();
       refetch();
     } catch (error) {
@@ -377,6 +388,11 @@ const Companies = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-md border-l-4 border-primary bg-muted/40 p-4 text-sm">
+        <strong>Revenue roles:</strong> BD, Sales, AE, Customer Success, Strategic Partnerships.{" "}
+        <strong>Cost centers:</strong> Policy, Compliance, Security, Legal — these get cut first.
+        If you can't trace your role to company revenue, keep looking.
+      </div>
       <div className="flex justify-between items-center">
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">Target Companies</h1>
@@ -428,7 +444,37 @@ const Companies = () => {
                   id="target_role"
                   value={formData.target_role}
                   onChange={(e) => setFormData({ ...formData, target_role: e.target.value })}
+                  placeholder="e.g. Account Executive"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Is this a revenue-generating role? *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Yes: BD, Sales, Account Executive, Customer Success, Strategic Partnerships, Sales Engineering. No: Policy, Compliance, Security, Legal.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.revenue_role === true ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setFormData({ ...formData, revenue_role: true })}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.revenue_role === false ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setFormData({ ...formData, revenue_role: false })}
+                  >
+                    No
+                  </Button>
+                </div>
+                {formData.revenue_role === false && (
+                  <div className="rounded-md border border-yellow-400 bg-yellow-50 p-3 text-sm text-yellow-900">
+                    Cost-center roles get cut first and cap your earning potential. Consider targeting a revenue-adjacent role at this company instead.
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority (0-5)</Label>
@@ -499,6 +545,17 @@ const Companies = () => {
                         <Badge variant="secondary" className="ml-2">Archived</Badge>
                       )}
                     </CardTitle>
+                    {company.target_role && (
+                      <p className="text-sm text-muted-foreground mt-1 ml-7">{company.target_role}</p>
+                    )}
+                    <div className="mt-2 ml-7">
+                      {company.revenue_role === true && (
+                        <Badge className="bg-green-600 hover:bg-green-600 text-white">Revenue role</Badge>
+                      )}
+                      {company.revenue_role === false && (
+                        <Badge className="bg-red-600 hover:bg-red-600 text-white">Cost center ⚠️</Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {getPriorityLabel(company.priority)}
