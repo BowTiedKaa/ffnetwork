@@ -121,6 +121,13 @@ const Contacts = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const activeCount = contacts.filter((c) => !c.is_archived).length;
+    if (!isPro && activeCount >= 5) {
+      toast({ title: "Free tier limit", description: "Upgrade to Pro to add more contacts.", variant: "destructive" });
+      setIsOpen(false);
+      return;
+    }
+
     try {
       const validatedData = contactSchema.parse(formData);
 
