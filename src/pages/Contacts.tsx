@@ -732,12 +732,23 @@ const Contacts = () => {
                             {contact.warmth_level === "hot" ? "hot" : contact.warmth_level}
                           </span>
                         </div>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          Goal: {CONTACT_COACHING[(contact.contact_type as ContactType) || "unspecified"].goal}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           Last interaction: {formatLastInteraction(contact.last_contact_date)}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Call prep"
+                        onClick={() => setCallPrepContact(contact)}
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"
@@ -794,6 +805,15 @@ const Contacts = () => {
                     <div className="pt-3 border-t mt-3" onClick={(e) => e.stopPropagation()}>
                       <p className="text-xs font-medium text-muted-foreground mb-2">Suggested Actions</p>
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCallPrepContact(contact)}
+                          className="gap-1 h-7 text-xs"
+                        >
+                          <ClipboardList className="h-3 w-3" />
+                          Call Prep
+                        </Button>
                         {getSuggestedActions(contact).map((action, idx) => (
                           <Button
                             key={idx}
