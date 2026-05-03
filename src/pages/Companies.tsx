@@ -388,6 +388,11 @@ const Companies = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-md border-l-4 border-primary bg-muted/40 p-4 text-sm">
+        <strong>Revenue roles:</strong> BD, Sales, AE, Customer Success, Strategic Partnerships.{" "}
+        <strong>Cost centers:</strong> Policy, Compliance, Security, Legal — these get cut first.
+        If you can't trace your role to company revenue, keep looking.
+      </div>
       <div className="flex justify-between items-center">
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2">Target Companies</h1>
@@ -540,6 +545,17 @@ const Companies = () => {
                         <Badge variant="secondary" className="ml-2">Archived</Badge>
                       )}
                     </CardTitle>
+                    {company.target_role && (
+                      <p className="text-sm text-muted-foreground mt-1 ml-7">{company.target_role}</p>
+                    )}
+                    <div className="mt-2 ml-7">
+                      {company.revenue_role === true && (
+                        <Badge className="bg-green-600 hover:bg-green-600 text-white">Revenue role</Badge>
+                      )}
+                      {company.revenue_role === false && (
+                        <Badge className="bg-red-600 hover:bg-red-600 text-white">Cost center ⚠️</Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {getPriorityLabel(company.priority)}
