@@ -23,6 +23,9 @@ import { EditContactDialog } from "@/components/EditContactDialog";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { format } from "date-fns";
 import { useContacts, invalidateContactsCache, Contact } from "@/hooks/useContacts";
+import { CONTACT_COACHING, ContactType } from "@/lib/contactCoaching";
+import { CallPrepDialog } from "@/components/CallPrepDialog";
+import { ClipboardList } from "lucide-react";
 
 const ONBOARDING_COMPLETE_KEY = "ffn_onboarding_complete";
 
@@ -59,6 +62,7 @@ const Contacts = () => {
   const [companySearchValue, setCompanySearchValue] = useState("");
   const [selectedContactForMessage, setSelectedContactForMessage] = useState<Contact | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [callPrepContact, setCallPrepContact] = useState<Contact | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -418,57 +422,24 @@ const Contacts = () => {
             </DialogHeader>
             
             {contactTypeStep ? (
-              <div className="space-y-4 py-4">
-                <RadioGroup onValueChange={(value) => handleContactTypeSelect(value as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified")}>
-                  <Label 
-                    htmlFor="connector" 
-                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                  >
-                    <RadioGroupItem value="connector" id="connector" />
-                    <div className="flex-1">
-                      <span className="font-semibold">Connector</span>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Senior people, ex-colleagues, or mentors who can open doors and do warm introductions.
+              <div className="space-y-3 py-2">
+                {(["trailblazer", "connector", "reliable_recruiter", "unspecified"] as ContactType[]).map((type) => {
+                  const meta = CONTACT_COACHING[type];
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => handleContactTypeSelect(type)}
+                      className={`w-full text-left p-4 border-2 rounded-lg transition-colors hover:border-primary ${meta.colorClass}`}
+                    >
+                      <div className="font-semibold">{meta.label}</div>
+                      <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
+                      <p className="text-xs mt-2 text-blue-700 dark:text-blue-300">
+                        <span className="font-medium">Goal:</span> {meta.goal}
                       </p>
-                    </div>
-                  </Label>
-                  <Label 
-                    htmlFor="trailblazer" 
-                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                  >
-                    <RadioGroupItem value="trailblazer" id="trailblazer" />
-                    <div className="flex-1">
-                      <span className="font-semibold">Trailblazer</span>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Someone with a government/public background who already transitioned into the kind of role I want.
-                      </p>
-                    </div>
-                  </Label>
-                  <Label 
-                    htmlFor="reliable_recruiter" 
-                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                  >
-                    <RadioGroupItem value="reliable_recruiter" id="reliable_recruiter" />
-                    <div className="flex-1">
-                      <span className="font-semibold">Reliable Recruiter</span>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Recruiters who consistently share relevant roles, give honest feedback, and have a track record of actually placing people in good roles.
-                      </p>
-                    </div>
-                  </Label>
-                  <Label 
-                    htmlFor="unspecified" 
-                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                  >
-                    <RadioGroupItem value="unspecified" id="unspecified" />
-                    <div className="flex-1">
-                      <span className="font-semibold">Unspecified</span>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        A contact who's relevant but not yet categorized.
-                      </p>
-                    </div>
-                  </Label>
-                </RadioGroup>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -650,6 +621,19 @@ const Contacts = () => {
                 </div>
               )}
 
+              {(() => {
+                const meta = CONTACT_COACHING[formData.contact_type as ContactType];
+                return (
+                  <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-2">
+                    <p className="font-semibold">Your call prep for this {meta.label}</p>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      {meta.callPrep.map((line, i) => (
+                        <li key={i}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setContactTypeStep(true)} className="flex-1">
                     Back
@@ -748,12 +732,23 @@ const Contacts = () => {
                             {contact.warmth_level === "hot" ? "hot" : contact.warmth_level}
                           </span>
                         </div>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          Goal: {CONTACT_COACHING[(contact.contact_type as ContactType) || "unspecified"].goal}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           Last interaction: {formatLastInteraction(contact.last_contact_date)}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Call prep"
+                        onClick={() => setCallPrepContact(contact)}
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"
@@ -810,6 +805,15 @@ const Contacts = () => {
                     <div className="pt-3 border-t mt-3" onClick={(e) => e.stopPropagation()}>
                       <p className="text-xs font-medium text-muted-foreground mb-2">Suggested Actions</p>
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCallPrepContact(contact)}
+                          className="gap-1 h-7 text-xs"
+                        >
+                          <ClipboardList className="h-3 w-3" />
+                          Call Prep
+                        </Button>
                         {getSuggestedActions(contact).map((action, idx) => (
                           <Button
                             key={idx}
@@ -896,6 +900,14 @@ const Contacts = () => {
           companyName={selectedContactForMessage.company}
           contactType={selectedContactForMessage.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified"}
           targetRole={selectedContactForMessage.role}
+        />
+      )}
+      {callPrepContact && (
+        <CallPrepDialog
+          open={!!callPrepContact}
+          onOpenChange={(open) => !open && setCallPrepContact(null)}
+          contactName={callPrepContact.name}
+          contactType={(callPrepContact.contact_type as ContactType) || "unspecified"}
         />
       )}
     </div>

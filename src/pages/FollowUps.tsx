@@ -157,6 +157,11 @@ const FollowUps = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-md border-l-4 border-primary bg-muted/40 p-4 text-sm">
+        <strong>Cadence:</strong> 24-hour thank-you → 3-5 day check-in → detach and move on.
+        No response after 5 days? Assume it's a no. Add two new contacts for every one that goes cold.
+        Rejection is structural, not personal.
+      </div>
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Follow-ups</h1>
