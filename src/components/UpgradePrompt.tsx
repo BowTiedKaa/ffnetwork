@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
@@ -11,6 +12,7 @@ interface Props {
 
 export const UpgradePrompt = ({ title, className }: Props) => {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   return (
     <>
       <Card className={`p-6 bg-amber-50 border-amber-200 ${className || ""}`}>
@@ -22,13 +24,10 @@ export const UpgradePrompt = ({ title, className }: Props) => {
               FF Network Pro gives you unlimited contacts, AI message drafting, the Pitch Builder,
               and call prep guides — everything you need to run the Former Fed methodology.
             </p>
-            <p className="text-sm text-amber-900">
-              Get an access code at{" "}
-              <a href="https://formerfed.gumroad.com" target="_blank" rel="noreferrer" className="underline font-medium">
-                formerfed.gumroad.com
-              </a>
-            </p>
-            <Button size="sm" onClick={() => setOpen(true)}>I have a code</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => navigate("/pricing")}>Upgrade to Pro</Button>
+              <Button size="sm" variant="outline" onClick={() => setOpen(true)}>I have a code</Button>
+            </div>
           </div>
         </div>
       </Card>

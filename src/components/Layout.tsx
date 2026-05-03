@@ -10,6 +10,7 @@ import { RedeemCodeDialog } from "@/components/RedeemCodeDialog";
 import { Badge } from "@/components/ui/badge";
 import { KeyRound, Crown } from "lucide-react";
 import logo from "@/assets/former-fed-logo.jpg";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 interface LayoutProps {
   children: ReactNode;
@@ -93,6 +94,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PaymentTestModeBanner />
       <SimpleOnboarding
         open={showOnboardingReplay}
         onAddConnector={() => {

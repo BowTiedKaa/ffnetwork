@@ -9,3 +9,12 @@ enable_confirmations = false
 enabled = true
 uri = "http://host.docker.internal:54321/functions/v1/send-password-reset"
 secrets = "SEND_PASSWORD_RESET_HOOK_SECRET"
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.payments-webhook]
+verify_jwt = false
+
+[functions.create-portal-session]
+verify_jwt = false
