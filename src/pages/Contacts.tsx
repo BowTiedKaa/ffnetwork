@@ -902,6 +902,14 @@ const Contacts = () => {
           targetRole={selectedContactForMessage.role}
         />
       )}
+      {callPrepContact && (
+        <CallPrepDialog
+          open={!!callPrepContact}
+          onOpenChange={(open) => !open && setCallPrepContact(null)}
+          contactName={callPrepContact.name}
+          contactType={(callPrepContact.contact_type as ContactType) || "unspecified"}
+        />
+      )}
     </div>
   );
 };
