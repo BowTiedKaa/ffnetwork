@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
 import Companies from "./pages/Companies";
 import FollowUps from "./pages/FollowUps";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,14 @@ const App = () => (
             element={
               <Layout>
                 <FollowUps />
+              </Layout>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <Layout requireAdmin>
+                <Admin />
               </Layout>
             }
           />
