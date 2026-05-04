@@ -96,6 +96,79 @@ async function handleCheckoutCompleted(session: any, env: StripeEnv) {
   const provisional = new Date(Date.now() + 32 * 24 * 60 * 60 * 1000);
   await upgradeUserToPro(userId, provisional);
   console.log("Activated Pro from checkout.session.completed for user", userId);
+
+  // Send Pro activation confirmation email (best-effort, non-blocking failures)
+  try {
+    const { data: profile } = await getSupabase()
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const recipient = (profile?.email as string | undefined) ||
+      (session.customer_details?.email as string | undefined) ||
+      (session.customer_email as string | undefined);
+    if (recipient) {
+      await sendProActivationEmail(recipient, (profile?.full_name as string | undefined) ?? null);
+    } else {
+      console.log("No recipient email found for Pro activation notice; userId=", userId);
+    }
+  } catch (e) {
+    console.error("Failed to send Pro activation email:", e);
+  }
+}
+
+async function sendProActivationEmail(to: string, fullName: string | null) {
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!RESEND_API_KEY || !LOVABLE_API_KEY) {
+    console.log("Resend not configured; skipping activation email");
+    return;
+  }
+  const firstName = (fullName ?? "").trim().split(/\s+/)[0] || "there";
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
+      <h1 style="font-size:22px;margin:0 0 16px;">Welcome to FF Network Pro, ${escapeHtml(firstName)} 🎉</h1>
+      <p style="font-size:15px;line-height:1.55;margin:0 0 16px;">
+        Your payment went through and Pro access is now active on your account.
+      </p>
+      <p style="font-size:15px;line-height:1.55;margin:0 0 16px;">You now have unlimited contacts and companies, AI-powered outreach drafts, the pitch builder, call prep, and methodology coaching.</p>
+      <p style="margin:24px 0;">
+        <a href="https://ffnetwork.lovable.app/dashboard" style="background:#0f172a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;display:inline-block;">Open your dashboard</a>
+      </p>
+      <p style="font-size:13px;color:#64748b;line-height:1.5;margin:24px 0 0;">If you didn't make this purchase, reply to this email and we'll sort it out right away.</p>
+      <p style="font-size:13px;color:#64748b;margin:16px 0 0;">— The FF Network team</p>
+    </div></body></html>`;
+
+  const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": RESEND_API_KEY,
+    },
+    body: JSON.stringify({
+      from: "FF Network <onboarding@resend.dev>",
+      to: [to],
+      subject: "You're in — Pro access activated",
+      html,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error("Resend send failed:", res.status, txt);
+  } else {
+    console.log("Pro activation email sent to", to);
+  }
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c] as string));
 }
 
 async function handleWebhook(req: Request, env: StripeEnv) {

@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, CheckCircle2 } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, MessageSquare, CheckCheck, Flame } from "lucide-react";
 import { z } from "zod";
+import { CONTACT_COACHING, ContactType } from "@/lib/contactCoaching";
+import { SendMessageDialog } from "@/components/SendMessageDialog";
 
 const followUpSchema = z.object({
   contact_id: z.string().uuid("Please select a valid contact"),
@@ -37,9 +39,22 @@ interface Contact {
   company: string | null;
 }
 
+interface NeedsContact {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  contact_type: ContactType;
+  warmth_level: string | null;
+  last_contact_date: string | null;
+  notes: string | null;
+}
+
 const FollowUps = () => {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [needsFollowUp, setNeedsFollowUp] = useState<NeedsContact[]>([]);
+  const [messageContact, setMessageContact] = useState<NeedsContact | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     contact_id: "",
@@ -51,6 +66,7 @@ const FollowUps = () => {
   useEffect(() => {
     fetchFollowUps();
     fetchContacts();
+    fetchNeedsFollowUp();
   }, []);
 
   const fetchContacts = async () => {
@@ -64,6 +80,81 @@ const FollowUps = () => {
       .eq("is_archived", false);
 
     if (data) setContacts(data);
+  };
+
+  const fetchNeedsFollowUp = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    const cutoff = fiveDaysAgo.toISOString();
+
+    const { data } = await supabase
+      .from("contacts")
+      .select("id, name, email, company, contact_type, warmth_level, last_contact_date, notes")
+      .eq("user_id", user.id)
+      .eq("is_archived", false)
+      .in("warmth_level", ["cold", "hot"])
+      .or(`last_contact_date.is.null,last_contact_date.lt.${cutoff}`);
+
+    if (data) {
+      const sorted = (data as NeedsContact[]).sort((a, b) => {
+        if (!a.last_contact_date && b.last_contact_date) return -1;
+        if (a.last_contact_date && !b.last_contact_date) return 1;
+        if (!a.last_contact_date && !b.last_contact_date) return 0;
+        return new Date(a.last_contact_date!).getTime() - new Date(b.last_contact_date!).getTime();
+      });
+      setNeedsFollowUp(sorted);
+    }
+  };
+
+  const handleLogInteraction = async (contact: NeedsContact) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Bump warmth one level up: cold -> warm -> hot
+    const nextWarmth =
+      contact.warmth_level === "cold" ? "warm" :
+      contact.warmth_level === "warm" ? "hot" :
+      "hot";
+
+    const today = new Date().toISOString();
+
+    const { error: contactErr } = await supabase
+      .from("contacts")
+      .update({ last_contact_date: today, warmth_level: nextWarmth })
+      .eq("id", contact.id);
+
+    if (contactErr) {
+      toast({ title: "Error", description: "Could not log interaction", variant: "destructive" });
+      return;
+    }
+
+    await supabase.from("interactions").insert({
+      user_id: user.id,
+      contact_id: contact.id,
+      interaction_type: "follow_up",
+      interaction_date: new Date().toISOString().slice(0, 10),
+    });
+
+    toast({ title: "Interaction logged", description: `${contact.name} marked as ${nextWarmth}.` });
+    fetchNeedsFollowUp();
+  };
+
+  const daysSince = (iso: string | null) => {
+    if (!iso) return null;
+    const ms = Date.now() - new Date(iso).getTime();
+    return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+  };
+
+  const contactTypeBadgeClass = (t: ContactType) => {
+    switch (t) {
+      case "connector": return "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200";
+      case "trailblazer": return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200";
+      case "reliable_recruiter": return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    }
   };
 
   const fetchFollowUps = async () => {
@@ -157,19 +248,110 @@ const FollowUps = () => {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-1">Follow-ups</h1>
+        <p className="text-muted-foreground">Stay in motion. Re-engage what's cooling, schedule what matters.</p>
+      </div>
       <div className="rounded-md border-l-4 border-primary bg-muted/40 p-4 text-sm">
         <strong>Cadence:</strong> 24-hour thank-you → 3-5 day check-in → detach and move on.
         No response after 5 days? Assume it's a no. Add two new contacts for every one that goes cold.
         Rejection is structural, not personal.
       </div>
-      <div className="flex justify-between items-center">
+
+      {/* Section 1 — Auto-generated Needs Follow-up */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Flame className="h-6 w-6 text-primary" />
+              Needs Follow-up
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Cold or hot contacts you haven't touched in 5+ days. Re-engage now.
+            </p>
+          </div>
+          <Badge variant="secondary" className="text-base px-3 py-1">{needsFollowUp.length}</Badge>
+        </div>
+
+        {needsFollowUp.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-10">
+              <CheckCheck className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">You're caught up. Nothing needs attention right now.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {needsFollowUp.map((c) => {
+              const type = (c.contact_type as ContactType) || "unspecified";
+              const meta = CONTACT_COACHING[type];
+              const days = daysSince(c.last_contact_date);
+              return (
+                <Card key={c.id}>
+                  <CardContent className="p-5">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="font-semibold">{c.name}</h3>
+                          <Badge variant="secondary" className={contactTypeBadgeClass(type)}>
+                            {meta.label}
+                          </Badge>
+                          {c.company && (
+                            <span className="text-sm text-muted-foreground">at {c.company}</span>
+                          )}
+                          {c.warmth_level === "hot" && (
+                            <Badge variant="destructive">hot</Badge>
+                          )}
+                          {c.warmth_level === "cold" && (
+                            <Badge variant="outline">cold</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          <span className="font-medium text-foreground">Goal:</span> {meta.goal}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {days === null
+                            ? "Never contacted"
+                            : `${days} day${days === 1 ? "" : "s"} since last contact`}
+                        </p>
+                      </div>
+                      <div className="flex flex-row md:flex-col gap-2 md:w-44">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2 flex-1"
+                          onClick={() => handleLogInteraction(c)}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Log Interaction
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="gap-2 flex-1"
+                          onClick={() => setMessageContact(c)}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Message
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Section 2 — Manual Scheduled Follow-ups */}
+      <div className="flex justify-between items-center pt-4 border-t">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Follow-ups</h1>
-          <p className="text-muted-foreground">Never miss a follow-up opportunity</p>
+          <h2 className="text-2xl font-bold mb-1">Scheduled Follow-ups</h2>
+          <p className="text-sm text-muted-foreground">Manual reminders you've set for specific dates.</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button variant="outline" className="gap-2">
               <Plus className="h-4 w-4" />
               Schedule Follow-up
             </Button>
@@ -222,12 +404,8 @@ const FollowUps = () => {
 
       {followUps.length === 0 ? (
         <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No follow-ups scheduled. Stay on top of your network!</p>
-            <Button onClick={() => setIsOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Schedule Your First Follow-up
-            </Button>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground text-sm">No manually scheduled follow-ups.</p>
           </CardContent>
         </Card>
       ) : (
@@ -274,6 +452,18 @@ const FollowUps = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {messageContact && (
+        <SendMessageDialog
+          open={!!messageContact}
+          onOpenChange={(open) => !open && setMessageContact(null)}
+          contactName={messageContact.name}
+          contactEmail={messageContact.email}
+          companyName={messageContact.company}
+          contactType={(messageContact.contact_type as "connector" | "trailblazer" | "reliable_recruiter" | "unspecified") || "unspecified"}
+          contactNotes={messageContact.notes}
+        />
       )}
     </div>
   );
