@@ -73,12 +73,13 @@ describe("Admin access-code generation", () => {
 
     await user.click(screen.getByRole("tab", { name: "Codes" }));
     await user.click(screen.getByRole("button", { name: /generate codes/i }));
-    await user.click(screen.getByRole("combobox"));
 
-    const option = await screen.findByText('3 years (Gumroad "Be More Earn More")');
+    const durationSelect = screen.getByRole("combobox") as HTMLSelectElement;
+    const option = await screen.findByRole("option", { name: '3 years (Gumroad "Be More Earn More")' });
     expect(option).toBeTruthy();
 
-    await user.click(option);
+    await user.selectOptions(durationSelect, "36");
+    expect(durationSelect.value).toBe("36");
     await user.click(screen.getByRole("button", { name: "Generate" }));
 
     await waitFor(() =>
