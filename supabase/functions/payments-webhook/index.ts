@@ -83,9 +83,27 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
   if (userId) await downgradeUserToFree(userId);
 }
 
+async function handleCheckoutCompleted(session: any, env: StripeEnv) {
+  // For embedded subscription checkouts, customer.subscription.created should fire too,
+  // but we activate Pro here as a safety net so the user isn't stuck on the return page.
+  const userId = session.metadata?.userId;
+  if (!userId) {
+    console.log("checkout.session.completed without userId metadata; skipping");
+    return;
+  }
+  // Best-effort: give them ~32 days of Pro immediately; the subscription webhook
+  // will overwrite tier_expires_at with the real period end as soon as it arrives.
+  const provisional = new Date(Date.now() + 32 * 24 * 60 * 60 * 1000);
+  await upgradeUserToPro(userId, provisional);
+  console.log("Activated Pro from checkout.session.completed for user", userId);
+}
+
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
   switch (event.type) {
+    case "checkout.session.completed":
+      await handleCheckoutCompleted(event.data.object, env);
+      break;
     case "customer.subscription.created":
     case "customer.subscription.updated":
       await handleSubscriptionUpsert(event.data.object, env);
@@ -101,14 +119,11 @@ async function handleWebhook(req: Request, env: StripeEnv) {
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const rawEnv = new URL(req.url).searchParams.get("env");
-  if (rawEnv !== "sandbox" && rawEnv !== "live") {
-    return new Response(JSON.stringify({ received: true, ignored: "invalid env" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  // Default to sandbox if the registered webhook URL is missing the env query param.
+  // Live webhooks must explicitly pass ?env=live.
+  const env: StripeEnv = rawEnv === "live" ? "live" : "sandbox";
   try {
-    await handleWebhook(req, rawEnv);
+    await handleWebhook(req, env);
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
