@@ -12,28 +12,19 @@ function getSupabase() {
   return _supabase;
 }
 
-function tierExpiresFromPriceId(priceId: string, periodEnd: Date): Date {
-  // Use the subscription period end as the source of truth
-  return periodEnd;
-}
-
 async function upgradeUserToPro(userId: string, expiresAt: Date | null) {
   if (!userId) return;
-  await getSupabase()
-    .from("profiles")
-    .update({
-      tier: "pro",
-      tier_expires_at: expiresAt ? expiresAt.toISOString() : null,
-    })
-    .eq("id", userId);
+  // Uses DB function to take MAX(subscription expiry, active code expiry)
+  await getSupabase().rpc("apply_pro_entitlement", {
+    _user_id: userId,
+    _sub_expires_at: expiresAt ? expiresAt.toISOString() : null,
+  });
 }
 
 async function downgradeUserToFree(userId: string) {
   if (!userId) return;
-  await getSupabase()
-    .from("profiles")
-    .update({ tier: "free" })
-    .eq("id", userId);
+  // Keeps user Pro if an active access code still grants Pro
+  await getSupabase().rpc("downgrade_if_no_code", { _user_id: userId });
 }
 
 async function handleSubscriptionUpsert(subscription: any, env: StripeEnv) {
