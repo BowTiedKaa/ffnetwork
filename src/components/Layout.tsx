@@ -9,6 +9,8 @@ import { useUserAccess } from "@/hooks/useUserAccess";
 import { RedeemCodeDialog } from "@/components/RedeemCodeDialog";
 import { Badge } from "@/components/ui/badge";
 import { KeyRound, Crown } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { format } from "date-fns";
 import logo from "@/assets/former-fed-logo.jpg";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
@@ -23,7 +25,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
   const [showOnboardingReplay, setShowOnboardingReplay] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading: accessLoading, isAdmin, isPro } = useUserAccess(user?.id);
+  const { loading: accessLoading, isAdmin, isPro, tierExpiresAt } = useUserAccess(user?.id);
   const [redeemOpen, setRedeemOpen] = useState(false);
 
   useEffect(() => {
@@ -129,9 +131,27 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
             </div>
             <div className="flex items-center gap-2">
               {isPro ? (
-                <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-900 border-amber-200">
-                  <Crown className="h-3 w-3" /> Pro
-                </Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/pricing")}
+                        className="cursor-pointer"
+                        aria-label="View Pro subscription details"
+                      >
+                        <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200">
+                          <Crown className="h-3 w-3" /> Pro
+                        </Badge>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {tierExpiresAt
+                        ? `Active until ${format(new Date(tierExpiresAt), "MMM d, yyyy")}`
+                        : "Pro access active"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
                 <Button
                   variant="outline"
