@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Crown } from "lucide-react";
+import { Check, Crown, Loader2, ExternalLink } from "lucide-react";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { useUserAccess } from "@/hooks/useUserAccess";
+import { getStripeEnvironment } from "@/lib/stripe";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import type { User } from "@supabase/supabase-js";
 
 const PLANS = [
@@ -38,12 +40,51 @@ const FEATURES = [
 export default function Pricing() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const { isPro } = useUserAccess(user?.id);
+  const { isPro, tierExpiresAt } = useUserAccess(user?.id);
   const [selected, setSelected] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
+
+  // Detect whether the user has a Stripe subscription row (vs. code-only Pro)
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("environment", getStripeEnvironment())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setHasSubscription(!!data));
+  }, [user?.id]);
+
+  const openPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-portal-session", {
+        body: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/pricing`,
+        },
+      });
+      if (error || !data?.url) throw new Error(error?.message || "Could not open billing portal");
+      window.open(data.url as string, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast({
+        title: "Couldn't open billing portal",
+        description: e instanceof Error ? e.message : "Try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   const returnUrl = `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`;
 
@@ -59,14 +100,29 @@ export default function Pricing() {
       {isPro && (
         <Card className="p-4 bg-amber-50 border-amber-200 flex items-center gap-3">
           <Crown className="h-5 w-5 text-amber-700" />
-          <p className="text-sm text-amber-900">You already have Pro access.</p>
-          <Button size="sm" variant="outline" className="ml-auto" onClick={() => navigate("/dashboard")}>
-            Go to dashboard
-          </Button>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-900">You have Pro access.</p>
+            {tierExpiresAt && (
+              <p className="text-xs text-amber-800">
+                {hasSubscription ? "Renews" : "Active until"} {format(new Date(tierExpiresAt), "MMM d, yyyy")}
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {hasSubscription && (
+              <Button size="sm" variant="outline" onClick={openPortal} disabled={portalLoading} className="gap-1">
+                {portalLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                Manage subscription
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={() => navigate("/dashboard")}>
+              Dashboard
+            </Button>
+          </div>
         </Card>
       )}
 
-      {!selected && (
+      {!selected && !isPro && (
         <div className="grid md:grid-cols-2 gap-4">
           {PLANS.map((p) => (
             <Card
