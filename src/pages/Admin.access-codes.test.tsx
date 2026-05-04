@@ -36,6 +36,12 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 beforeEach(() => {
+  Object.defineProperties(HTMLElement.prototype, {
+    hasPointerCapture: { value: vi.fn(() => false), configurable: true },
+    releasePointerCapture: { value: vi.fn(), configurable: true },
+    scrollIntoView: { value: vi.fn(), configurable: true },
+  });
+
   let codeFetches = 0;
   selectOrderMock.mockImplementation(() => {
     codeFetches += 1;
