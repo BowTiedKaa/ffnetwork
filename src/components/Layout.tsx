@@ -8,11 +8,13 @@ import { SimpleOnboarding } from "@/components/SimpleOnboarding";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { RedeemCodeDialog } from "@/components/RedeemCodeDialog";
 import { Badge } from "@/components/ui/badge";
-import { KeyRound, Crown } from "lucide-react";
+import { KeyRound, Crown, Settings, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import logo from "@/assets/former-fed-logo.jpg";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { getStripeEnvironment } from "@/lib/stripe";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: ReactNode;
@@ -27,6 +29,47 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
   const location = useLocation();
   const { loading: accessLoading, isAdmin, isPro, tierExpiresAt } = useUserAccess(user?.id);
   const [redeemOpen, setRedeemOpen] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!user?.id || !isPro) {
+      setHasSubscription(false);
+      return;
+    }
+    supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("environment", getStripeEnvironment())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setHasSubscription(!!data));
+  }, [user?.id, isPro]);
+
+  const openPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-portal-session", {
+        body: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/pricing`,
+        },
+      });
+      if (error || !data?.url) throw new Error(error?.message || "Could not open billing portal");
+      window.open(data.url as string, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast({
+        title: "Couldn't open billing portal",
+        description: e instanceof Error ? e.message : "Try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -131,6 +174,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
             </div>
             <div className="flex items-center gap-2">
               {isPro ? (
+                <>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -152,6 +196,23 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                {hasSubscription && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openPortal}
+                    disabled={portalLoading}
+                    className="gap-2"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Settings className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">Manage subscription</span>
+                  </Button>
+                )}
+                </>
               ) : (
                 <Button
                   variant="outline"
