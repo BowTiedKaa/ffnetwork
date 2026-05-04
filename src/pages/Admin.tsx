@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Plus } from "lucide-react";
@@ -336,15 +335,16 @@ const Admin = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Duration</Label>
-                <Select value={genDuration} onValueChange={(v) => setGenDuration(v as "1" | "6" | "12" | "36")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 month</SelectItem>
-                    <SelectItem value="6">6 months</SelectItem>
-                    <SelectItem value="12">12 months</SelectItem>
-                    <SelectItem value="36">3 years (Gumroad "Be More Earn More")</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select
+                  value={genDuration}
+                  onChange={(e) => setGenDuration(e.target.value as "1" | "6" | "12" | "36")}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="1">1 month</option>
+                  <option value="6">6 months</option>
+                  <option value="12">12 months</option>
+                  <option value="36">3 years (Gumroad "Be More Earn More")</option>
+                </select>
               </div>
               <div className="space-y-2">
                 <Label>Number of codes (1-50)</Label>
