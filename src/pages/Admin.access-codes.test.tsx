@@ -4,8 +4,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Admin from "./Admin";
 
-const rpcMock = vi.fn();
-const selectOrderMock = vi.fn();
+const { rpcMock, selectOrderMock } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
+  selectOrderMock: vi.fn(),
+}));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
