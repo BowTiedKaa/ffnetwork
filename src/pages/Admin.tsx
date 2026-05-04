@@ -39,7 +39,7 @@ const Admin = () => {
   const [codes, setCodes] = useState<any[]>([]);
   const [codesLoading, setCodesLoading] = useState(true);
   const [genOpen, setGenOpen] = useState(false);
-  const [genDuration, setGenDuration] = useState<"1" | "6" | "12">("1");
+  const [genDuration, setGenDuration] = useState<"1" | "6" | "12" | "36">("1");
   const [genCount, setGenCount] = useState(5);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<string[]>([]);
@@ -336,12 +336,13 @@ const Admin = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Duration</Label>
-                <Select value={genDuration} onValueChange={(v) => setGenDuration(v as "1" | "6" | "12")}>
+                <Select value={genDuration} onValueChange={(v) => setGenDuration(v as "1" | "6" | "12" | "36")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">1 month</SelectItem>
                     <SelectItem value="6">6 months</SelectItem>
                     <SelectItem value="12">12 months</SelectItem>
+                    <SelectItem value="36">3 years (Gumroad "Be More Earn More")</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
