@@ -481,10 +481,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_pro_entitlement: {
+        Args: { _sub_expires_at: string; _user_id: string }
+        Returns: undefined
+      }
+      downgrade_if_no_code: { Args: { _user_id: string }; Returns: undefined }
       generate_access_codes: {
         Args: { _count: number; _duration_months: number }
         Returns: string[]
       }
+      get_code_expiry: { Args: { _user_id: string }; Returns: string }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
