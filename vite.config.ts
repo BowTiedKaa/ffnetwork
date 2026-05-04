@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
   test: {
     environment: "jsdom",
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: mode === "development" ? [react(), componentTagger()] : [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
