@@ -95,8 +95,16 @@ export const SendMessageDialog = ({
       return;
     }
     setAiLoading(true);
+    const timeoutMs = 20000;
+    let timedOut = false;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        timedOut = true;
+        reject(new Error("Request timed out after 20 seconds"));
+      }, timeoutMs);
+    });
     try {
-      const { data, error } = await supabase.functions.invoke("draft-message", {
+      const invokePromise = supabase.functions.invoke("draft-message", {
         body: {
           contactType: contactType || "unspecified",
           contactName,
@@ -107,6 +115,7 @@ export const SendMessageDialog = ({
           targetRole: profile.target_role_seeking,
         },
       });
+      const { data, error } = (await Promise.race([invokePromise, timeoutPromise])) as Awaited<typeof invokePromise>;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       const generated = (data as any)?.message?.trim();
@@ -118,8 +127,12 @@ export const SendMessageDialog = ({
       }
     } catch (e) {
       toast({
-        title: "AI draft failed",
-        description: e instanceof Error ? e.message : "Try again in a moment.",
+        title: timedOut ? "AI draft timed out" : "AI draft failed",
+        description: timedOut
+          ? "The AI took too long to respond. Please try again — first attempts can be slower as the service warms up."
+          : e instanceof Error
+            ? e.message
+            : "Try again in a moment.",
         variant: "destructive",
       });
     } finally {
