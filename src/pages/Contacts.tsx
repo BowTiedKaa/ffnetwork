@@ -118,8 +118,12 @@ const Contacts = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[Contacts] handleSubmit fired", formData);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast({ title: "Not signed in", description: "Please sign in again.", variant: "destructive" });
+      return;
+    }
 
     const activeCount = contacts.filter((c) => !c.is_archived).length;
     if (!isPro && activeCount >= 5) {
@@ -178,9 +182,10 @@ const Contacts = () => {
       });
 
       if (error) {
+        console.error("[Contacts] insert error", error);
         toast({
           title: "Error",
-          description: "Failed to add contact",
+          description: error.message || "Failed to add contact",
           variant: "destructive",
         });
         return;
@@ -202,10 +207,17 @@ const Contacts = () => {
       invalidateContactsCache();
       refetch();
     } catch (error) {
+      console.error("[Contacts] handleSubmit caught", error);
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation error",
           description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Unexpected error",
+          description: error instanceof Error ? error.message : "Could not save contact",
           variant: "destructive",
         });
       }
@@ -490,6 +502,7 @@ const Contacts = () => {
                 <Popover open={companyPopoverOpen} onOpenChange={setCompanyPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       role="combobox"
                       aria-expanded={companyPopoverOpen}
