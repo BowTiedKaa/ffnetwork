@@ -15,3 +15,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Clear in-memory caches on any auth state change to prevent
+// cross-user data leaks when a user signs out/in in the same tab.
+supabase.auth.onAuthStateChange(() => {
+  import("@/hooks/useContacts").then((m) => m.invalidateContactsCache?.());
+  import("@/hooks/useCompanies").then((m) => m.invalidateCompaniesCache?.());
+});
