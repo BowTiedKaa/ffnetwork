@@ -450,7 +450,7 @@ const Contacts = () => {
             )}
             Add Contact
           </Button>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {contactTypeStep ? "What type of contact are you adding?" : "Add New Contact"}
