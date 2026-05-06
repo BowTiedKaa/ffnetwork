@@ -94,6 +94,11 @@ const Auth = () => {
           return;
         }
 
+        // Notify admin of new signup (best-effort)
+        supabase.functions.invoke("notify-admin", {
+          body: { event: "signup", email: validation.email, fullName: validation.fullName ?? null },
+        }).catch((e) => console.error("notify-admin signup failed", e));
+
         toast({
           title: "Account created!",
           description: "Welcome to your networking tracker.",
