@@ -112,6 +112,29 @@ async function handleCheckoutCompleted(session: any, env: StripeEnv) {
     } else {
       console.log("No recipient email found for Pro activation notice; userId=", userId);
     }
+    // Notify admin of new Pro customer (best-effort)
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+        },
+        body: JSON.stringify({
+          event: "stripe_upgrade",
+          email: recipient ?? null,
+          fullName: (profile?.full_name as string | undefined) ?? null,
+          details: {
+            userId,
+            sessionId: session.id,
+            amount_total: session.amount_total,
+            currency: session.currency,
+          },
+        }),
+      });
+    } catch (e) {
+      console.error("notify-admin stripe_upgrade failed:", e);
+    }
   } catch (e) {
     console.error("Failed to send Pro activation email:", e);
   }

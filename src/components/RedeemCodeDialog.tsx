@@ -48,6 +48,21 @@ export const RedeemCodeDialog = ({ open, onOpenChange, onRedeemed }: Props) => {
     }
     setSuccess(result.expires_at || "");
     onRedeemed?.();
+    // Notify admin (best-effort)
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const u = userData?.user;
+      supabase.functions.invoke("notify-admin", {
+        body: {
+          event: "code_redeemed",
+          email: u?.email,
+          fullName: (u?.user_metadata as any)?.full_name ?? null,
+          details: { code: cleaned, expires_at: result.expires_at },
+        },
+      }).catch((e) => console.error("notify-admin redeem failed", e));
+    } catch (e) {
+      console.error("notify-admin redeem failed", e);
+    }
     // Reload after a brief moment to refresh tier state across the app
     setTimeout(() => {
       window.location.reload();
