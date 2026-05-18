@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { SEO } from "@/components/SEO";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -116,10 +117,17 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <main className="min-h-screen flex items-center justify-center bg-background px-4">
+      <SEO
+        title="Reset your password — FF Network"
+        description="Set a new password for your FF Network account."
+        path="/reset-password"
+      />
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Reset your password</CardTitle>
+          <CardTitle asChild>
+            <h1>Reset your password</h1>
+          </CardTitle>
           <CardDescription>
             Enter your new password below
           </CardDescription>
@@ -157,7 +165,7 @@ const ResetPassword = () => {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 };
 
