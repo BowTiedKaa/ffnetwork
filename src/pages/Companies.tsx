@@ -594,6 +594,7 @@ const Companies = () => {
                     <Button
                       size="icon"
                       variant="ghost"
+                      aria-label="Edit company"
                       onClick={() => setEditCompanyId(company.id)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -603,6 +604,7 @@ const Companies = () => {
                       variant="ghost"
                       onClick={() => setArchiveCompanyId(company.id)}
                       title={company.is_archived ? "Restore company" : "Archive company"}
+                      aria-label={company.is_archived ? "Restore company" : "Archive company"}
                     >
                       {company.is_archived ? (
                         <ArchiveRestore className="h-4 w-4" />
@@ -614,6 +616,7 @@ const Companies = () => {
                       <Button
                         size="icon"
                         variant="ghost"
+                        aria-label="Delete company"
                         onClick={() => setDeleteCompanyId(company.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
