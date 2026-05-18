@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Building2, Target, Users, Pencil, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { SEO } from "@/components/SEO";
 import { z } from "zod";
 import { format } from "date-fns";
 import { EditCompanyDialog } from "@/components/EditCompanyDialog";
@@ -404,6 +405,11 @@ const Companies = () => {
 
   return (
     <div className="space-y-6">
+      <SEO
+        title="Target Companies — FF Network"
+        description="Track your target companies for the federal-to-tech transition: revenue roles, priority, and warm paths in."
+        path="/companies"
+      />
       {!accessLoading && !isPro && companies.filter((c) => !c.is_archived).length >= 3 && (
         <UpgradePrompt title="You've hit the 3-company free limit." />
       )}
