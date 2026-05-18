@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { SEO } from "@/components/SEO";
 import { Plus, Calendar, CheckCircle2, MessageSquare, CheckCheck, Flame } from "lucide-react";
 import { z } from "zod";
 import { CONTACT_COACHING, ContactType } from "@/lib/contactCoaching";
@@ -248,6 +249,11 @@ const FollowUps = () => {
 
   return (
     <div className="space-y-6">
+      <SEO
+        title="Follow-ups — FF Network"
+        description="Cadence and reminders for your federal-to-tech outreach: thank-yous, check-ins, and warm re-engagement."
+        path="/follow-ups"
+      />
       <div>
         <h1 className="text-3xl font-bold mb-1">Follow-ups</h1>
         <p className="text-muted-foreground">Stay in motion. Re-engage what's cooling, schedule what matters.</p>
