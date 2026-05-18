@@ -1,0 +1,16 @@
+# FF Network
+
+> Career transition tracker for former federal employees moving into tech. Track contacts, companies, follow-ups, and momentum.
+
+FF Network prioritizes revenue-generating tech roles (Sales, Business Development, Customer Success) for people leaving federal government. The app provides contact and company tracking, follow-up reminders, AI-assisted outreach drafting, and a pitch builder.
+
+## Pages
+
+- [Home](/): App entry point — redirects to dashboard for signed-in users.
+- [Pricing](/pricing): Free and Pro plan details, Stripe checkout for Pro.
+- [Sign in / Sign up](/auth): Account creation and login.
+
+## Optional
+
+- [Sitemap](/sitemap.xml): Machine-readable list of public routes.
+- [Robots](/robots.txt): Crawler directives.
