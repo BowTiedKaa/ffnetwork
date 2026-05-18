@@ -519,6 +519,11 @@ const Dashboard = () => {
       />
       
       <div className="space-y-6">
+        <SEO
+          title="Dashboard — FF Network"
+          description="Your federal-to-tech networking dashboard: streaks, daily tasks, warm paths, and momentum."
+          path="/dashboard"
+        />
         {/* Header Section */}
         <div className="space-y-2 pb-4 border-b">
           <h1 className="text-3xl font-bold">Build a network that supports your next career step</h1>
