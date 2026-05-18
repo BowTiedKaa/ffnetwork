@@ -424,6 +424,7 @@ const FollowUps = () => {
                     checked={followUp.completed}
                     onCheckedChange={(checked) => handleComplete(followUp.id, checked as boolean)}
                     className="mt-1"
+                    aria-label={`Mark follow-up complete for ${followUp.contacts.name}`}
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
