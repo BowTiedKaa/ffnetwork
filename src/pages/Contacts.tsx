@@ -788,6 +788,7 @@ const Contacts = () => {
                         size="icon"
                         variant="ghost"
                         title="Call prep"
+                        aria-label="Open call prep"
                         onClick={() => isPro ? setCallPrepContact(contact) : toast({ title: "Pro feature", description: "Call Prep is a Pro feature. Redeem an access code to unlock." })}
                       >
                         {isPro ? <ClipboardList className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
@@ -795,6 +796,7 @@ const Contacts = () => {
                       <Button
                         size="icon"
                         variant="ghost"
+                        aria-label="Edit contact"
                         onClick={() => setEditContactId(contact.id)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -804,6 +806,7 @@ const Contacts = () => {
                         variant="ghost"
                         onClick={() => setArchiveContactId(contact.id)}
                         title={contact.is_archived ? "Restore contact" : "Archive contact"}
+                        aria-label={contact.is_archived ? "Restore contact" : "Archive contact"}
                       >
                         {contact.is_archived ? (
                           <ArchiveRestore className="h-4 w-4" />
@@ -815,6 +818,7 @@ const Contacts = () => {
                         <Button
                           size="icon"
                           variant="ghost"
+                          aria-label="Delete contact"
                           onClick={() => setDeleteContactId(contact.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
