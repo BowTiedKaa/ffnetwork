@@ -10,6 +10,7 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { User } from "@supabase/supabase-js";
+import { SEO } from "@/components/SEO";
 
 const PLANS = [
   {
@@ -90,6 +91,11 @@ export default function Pricing() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      <SEO
+        title="Pricing — FF Network Pro"
+        description="Upgrade to FF Network Pro for unlimited contacts, AI message drafting, Pitch Builder, and call prep guides."
+        path="/pricing"
+      />
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">FF Network Pro</h1>
         <p className="text-muted-foreground">
