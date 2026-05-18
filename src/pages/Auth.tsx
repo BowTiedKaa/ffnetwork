@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { SEO } from "@/components/SEO";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -162,10 +163,16 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <main className="min-h-screen flex items-center justify-center bg-background px-4">
+      <SEO
+        title={isLogin ? "Sign in — FF Network" : "Create your FF Network account"}
+        description="Sign in or create a free FF Network account to track your federal-to-tech networking, follow-ups, and pitch."
+        path="/auth"
+      />
       <div className="w-full max-w-md space-y-6">
         {/* Context Section */}
         <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold">Sign in to FF Network</h1>
           <h2 className="text-xl font-semibold">What is FF Network?</h2>
           <p className="text-muted-foreground text-sm">
             A focused networking tool that helps you see who can help you reach the teams and opportunities you care about.
@@ -280,7 +287,7 @@ const Auth = () => {
         </CardContent>
       </Card>
       </div>
-    </div>
+    </main>
   );
 };
 
