@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { SEO } from "@/components/SEO";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -418,6 +419,11 @@ const Contacts = () => {
 
   return (
     <div className="space-y-6">
+      <SEO
+        title="Contacts — FF Network"
+        description="Track contacts in your federal-to-tech transition: warmth, last touch, and next action."
+        path="/contacts"
+      />
       {!accessLoading && !isPro && contacts.filter((c) => !c.is_archived).length >= 5 && (
         <UpgradePrompt title="You've hit the 5-contact free limit." />
       )}
