@@ -30,3 +30,6 @@ verify_jwt = true
 
 [functions.generate-pitch]
 verify_jwt = true
+
+[functions.pagespeed-scan]
+verify_jwt = true

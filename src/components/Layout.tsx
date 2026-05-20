@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { User, Session } from "@supabase/supabase-js";
-import { Home, Users, Building2, Calendar, LogOut, HelpCircle, Shield, Sparkles } from "lucide-react";
+import { Home, Users, Building2, Calendar, LogOut, HelpCircle, Shield, Sparkles, Gauge } from "lucide-react";
 import { SimpleOnboarding } from "@/components/SimpleOnboarding";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { RedeemCodeDialog } from "@/components/RedeemCodeDialog";
@@ -114,7 +114,12 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
     { path: "/companies", label: "Companies", icon: Building2 },
     { path: "/follow-ups", label: "Follow-ups", icon: Calendar },
     { path: "/pitch-builder", label: "Pitch Builder", icon: Sparkles },
-    ...(isAdmin ? [{ path: "/admin", label: "Admin", icon: Shield }] : []),
+    ...(isAdmin
+      ? [
+          { path: "/admin", label: "Admin", icon: Shield },
+          { path: "/seo-scan", label: "SEO scan", icon: Gauge },
+        ]
+      : []),
   ];
 
   if (!user) {
