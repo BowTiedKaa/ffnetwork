@@ -13,6 +13,7 @@ import FollowUps from "./pages/FollowUps";
 import PitchBuilder from "./pages/PitchBuilder";
 import Admin from "./pages/Admin";
 import Pricing from "./pages/Pricing";
+import SeoScan from "./pages/SeoScan";
 import CheckoutReturn from "./pages/CheckoutReturn";
 import NotFound from "./pages/NotFound";
 
@@ -73,6 +74,14 @@ const App = () => (
             element={
               <Layout requireAdmin>
                 <Admin />
+              </Layout>
+            }
+          />
+          <Route
+            path="/seo-scan"
+            element={
+              <Layout requireAdmin>
+                <SeoScan />
               </Layout>
             }
           />
