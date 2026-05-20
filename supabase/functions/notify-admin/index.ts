@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -48,6 +50,28 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
   try {
+    // Require either a valid user JWT (e.g. just-signed-up user) or the
+    // service role key (used by payments-webhook server-to-server). This
+    // blocks anonymous spam to the admin inbox.
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    let authorized = false;
+    if (token && serviceRoleKey && token === serviceRoleKey) {
+      authorized = true;
+    } else if (token) {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+      );
+      const { data: { user } } = await sb.auth.getUser(token);
+      if (user) authorized = true;
+    }
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const payload = (await req.json()) as Payload;
     if (!payload?.event) {
       return new Response(JSON.stringify({ error: "event required" }), {
