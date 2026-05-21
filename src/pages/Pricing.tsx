@@ -11,6 +11,48 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { User } from "@supabase/supabase-js";
 import { SEO } from "@/components/SEO";
+import { Helmet } from "react-helmet-async";
+
+const PRICING_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: "FF Network Pro",
+  description:
+    "Pro plan for FF Network — unlimited contacts and companies, AI message drafting, Pitch Builder, and call prep guides for former federal employees moving into tech.",
+  brand: { "@type": "Brand", name: "FF Network" },
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Pro Monthly",
+      price: "19.00",
+      priceCurrency: "USD",
+      url: "https://notify.theformerfed.com/pricing",
+      availability: "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "19.00",
+        priceCurrency: "USD",
+        billingIncrement: 1,
+        unitCode: "MON",
+      },
+    },
+    {
+      "@type": "Offer",
+      name: "Pro Annual",
+      price: "149.00",
+      priceCurrency: "USD",
+      url: "https://notify.theformerfed.com/pricing",
+      availability: "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "149.00",
+        priceCurrency: "USD",
+        billingIncrement: 1,
+        unitCode: "ANN",
+      },
+    },
+  ],
+};
 
 const PLANS = [
   {
@@ -96,6 +138,9 @@ export default function Pricing() {
         description="Upgrade to FF Network Pro for unlimited contacts, AI message drafting, Pitch Builder, and call prep guides."
         path="/pricing"
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(PRICING_JSONLD)}</script>
+      </Helmet>
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">FF Network Pro</h1>
         <p className="text-muted-foreground">
