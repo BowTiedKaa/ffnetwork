@@ -120,7 +120,7 @@ const ResetPassword = () => {
     <main className="min-h-screen flex items-center justify-center bg-background px-4">
       <SEO
         title="Reset your password — FF Network"
-        description="Set a new password for your FF Network account."
+        description="Set a new password for your FF Network account and get back to tracking your federal-to-tech career transition."
         path="/reset-password"
       />
       <Card className="w-full max-w-md">
