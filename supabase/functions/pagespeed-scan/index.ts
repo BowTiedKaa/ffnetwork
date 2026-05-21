@@ -60,13 +60,13 @@ Deno.serve(async (req) => {
     }
     const psi = await psiRes.json();
     const cats = psi?.lighthouseResult?.categories ?? {};
+    const audits = psi?.lighthouseResult?.audits ?? {};
     const scores = {
       performance: cats.performance ? Math.round((cats.performance.score ?? 0) * 100) : null,
       accessibility: cats.accessibility ? Math.round((cats.accessibility.score ?? 0) * 100) : null,
       bestPractices: cats["best-practices"] ? Math.round((cats["best-practices"].score ?? 0) * 100) : null,
       seo: cats.seo ? Math.round((cats.seo.score ?? 0) * 100) : null,
     };
-    const audits = psi?.lighthouseResult?.audits ?? {};
     const metrics = {
       fcp: audits["first-contentful-paint"]?.displayValue ?? null,
       lcp: audits["largest-contentful-paint"]?.displayValue ?? null,
@@ -74,6 +74,50 @@ Deno.serve(async (req) => {
       cls: audits["cumulative-layout-shift"]?.displayValue ?? null,
       speedIndex: audits["speed-index"]?.displayValue ?? null,
     };
+
+    const categoryLabels: Record<string, string> = {
+      performance: "Performance",
+      accessibility: "Accessibility",
+      "best-practices": "Best practices",
+      seo: "SEO",
+    };
+    const recommendations: Array<{
+      category: string;
+      categoryLabel: string;
+      id: string;
+      title: string;
+      description: string;
+      displayValue: string | null;
+      score: number | null;
+      scoreDisplayMode: string;
+      weight: number;
+    }> = [];
+    for (const catKey of CATEGORIES) {
+      const cat = cats[catKey];
+      if (!cat?.auditRefs) continue;
+      for (const ref of cat.auditRefs) {
+        const audit = audits[ref.id];
+        if (!audit) continue;
+        const mode = audit.scoreDisplayMode;
+        if (mode === "notApplicable" || mode === "manual" || mode === "informative") continue;
+        const score = audit.score;
+        if (score === null || score === undefined) continue;
+        if (score >= 0.9) continue;
+        recommendations.push({
+          category: catKey,
+          categoryLabel: categoryLabels[catKey] ?? catKey,
+          id: ref.id,
+          title: audit.title ?? ref.id,
+          description: audit.description ?? "",
+          displayValue: audit.displayValue ?? null,
+          score,
+          scoreDisplayMode: mode ?? "numeric",
+          weight: ref.weight ?? 0,
+        });
+      }
+    }
+    recommendations.sort((a, b) => (a.score - b.score) || (b.weight - a.weight));
+
     return new Response(
       JSON.stringify({
         url,
@@ -82,6 +126,7 @@ Deno.serve(async (req) => {
         fetchedAt: psi?.analysisUTCTimestamp ?? new Date().toISOString(),
         scores,
         metrics,
+        recommendations,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
