@@ -8,12 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { SEO } from "@/components/SEO";
-
-const passwordSchema = z.string()
-  .min(8, "Password must be at least 8 characters")
-  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-  .regex(/[0-9]/, "Password must contain at least one number");
+import { passwordSchema, passwordHelperText } from "@/lib/passwordRules";
+import { PasswordRequirements } from "@/components/PasswordRequirements";
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState("");
@@ -142,9 +138,8 @@ const ResetPassword = () => {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters with uppercase, lowercase, and number
-              </p>
+              <p className="text-xs text-muted-foreground">{passwordHelperText}</p>
+              <PasswordRequirements value={newPassword} className="pt-1" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>

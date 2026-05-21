@@ -8,14 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { SEO } from "@/components/SEO";
+import { passwordSchema, passwordHelperText } from "@/lib/passwordRules";
+import { PasswordRequirements } from "@/components/PasswordRequirements";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+  password: passwordSchema,
   fullName: z.string().optional(),
 });
 
@@ -257,6 +255,12 @@ const Auth = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                {!isLogin && (
+                  <>
+                    <p className="text-xs text-muted-foreground">{passwordHelperText}</p>
+                    <PasswordRequirements value={password} className="pt-1" />
+                  </>
+                )}
                 {isLogin && (
                   <button
                     type="button"
