@@ -53,6 +53,14 @@ Deno.serve(async (req) => {
     const psiRes = await fetch(psiUrl);
     if (!psiRes.ok) {
       const text = await psiRes.text();
+      if (psiRes.status === 429) {
+        return new Response(
+          JSON.stringify({
+            error: "PageSpeed daily quota exceeded. Add a GOOGLE_PAGESPEED_API_KEY secret to get your own quota, or try again tomorrow.",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       return new Response(
         JSON.stringify({ error: `PageSpeed API error: ${psiRes.status}`, detail: text.slice(0, 500) }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
