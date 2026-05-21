@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Gauge, Smartphone, Monitor } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
@@ -28,6 +30,19 @@ interface ScanResult {
     cls: string | null;
     speedIndex: string | null;
   };
+  recommendations?: Recommendation[];
+}
+
+interface Recommendation {
+  category: string;
+  categoryLabel: string;
+  id: string;
+  title: string;
+  description: string;
+  displayValue: string | null;
+  score: number | null;
+  scoreDisplayMode: string;
+  weight: number;
 }
 
 const defaultUrl =
@@ -41,6 +56,17 @@ const scoreColor = (score: number | null) => {
   if (score >= 50) return "text-amber-600";
   return "text-destructive";
 };
+
+const severityFor = (score: number | null) => {
+  if (score === null) return { label: "Info", className: "bg-muted text-muted-foreground" };
+  if (score < 0.5) return { label: "High", className: "bg-destructive/10 text-destructive border-destructive/30" };
+  if (score < 0.9) return { label: "Medium", className: "bg-amber-500/10 text-amber-700 border-amber-500/30" };
+  return { label: "Low", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" };
+};
+
+// Strip markdown links [text](url) → text, keep first sentence-ish for descriptions.
+const cleanMarkdown = (text: string) =>
+  text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
 
 const ScoreCard = ({ label, score }: { label: string; score: number | null }) => (
   <Card>
@@ -196,6 +222,48 @@ const SeoScan = () => {
                 </dl>
               </CardContent>
             </Card>
+
+            {result.recommendations && result.recommendations.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recommendations</CardTitle>
+                  <CardDescription>
+                    {result.recommendations.length} actionable {result.recommendations.length === 1 ? "issue" : "issues"} from failed audits, sorted by severity.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="multiple" className="w-full">
+                    {result.recommendations.map((rec) => {
+                      const sev = severityFor(rec.score);
+                      return (
+                        <AccordionItem key={`${rec.category}-${rec.id}`} value={`${rec.category}-${rec.id}`}>
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex flex-1 items-center gap-3 text-left pr-3">
+                              <Badge variant="outline" className={sev.className}>{sev.label}</Badge>
+                              <span className="font-medium">{rec.title}</span>
+                              <span className="ml-auto text-xs text-muted-foreground hidden sm:inline">
+                                {rec.categoryLabel}
+                                {rec.displayValue ? ` · ${rec.displayValue}` : ""}
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <p className="text-sm text-muted-foreground whitespace-pre-line">
+                              {cleanMarkdown(rec.description)}
+                            </p>
+                            {rec.displayValue && (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Current: <span className="font-medium text-foreground">{rec.displayValue}</span>
+                              </p>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
