@@ -1,35 +1,32 @@
 project_id = "gwxbbvvudenptargeznt"
 
-[auth.email]
-enable_signup = true
-double_confirm_changes = true
-enable_confirmations = false
+[auth]
+  [auth.email]
+    double_confirm_changes = true
+    enable_confirmations = false
+    enable_signup = true
+  [auth.hook]
+    [auth.hook.send_email]
+      enabled = true
+      secrets = "SEND_PASSWORD_RESET_HOOK_SECRET"
+      uri = "http://host.docker.internal:54321/functions/v1/send-password-reset"
 
-[auth.hook.send_email]
-enabled = true
-uri = "http://host.docker.internal:54321/functions/v1/send-password-reset"
-secrets = "SEND_PASSWORD_RESET_HOOK_SECRET"
-
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.payments-webhook]
-verify_jwt = false
-
-[functions.create-portal-session]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
-
-[functions.notify-admin]
-verify_jwt = false
-
-[functions.draft-message]
-verify_jwt = true
-
-[functions.generate-pitch]
-verify_jwt = true
-
-[functions.pagespeed-scan]
-verify_jwt = true
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.create-checkout]
+    verify_jwt = false
+  [functions.create-portal-session]
+    verify_jwt = false
+  [functions.draft-message]
+    verify_jwt = true
+  [functions.generate-pitch]
+    verify_jwt = true
+  [functions.notify-admin]
+    verify_jwt = false
+  [functions.pagespeed-scan]
+    verify_jwt = true
+  [functions.payments-webhook]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
