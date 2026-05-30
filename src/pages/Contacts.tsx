@@ -745,6 +745,7 @@ const Contacts = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <h2 className="sr-only">Your contacts</h2>
           {contacts.map((contact) => {
             const contactTypeInfo = getContactTypeInfo(contact.contact_type);
             const ContactIcon = contactTypeInfo.icon;
