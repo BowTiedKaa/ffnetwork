@@ -158,7 +158,15 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-8">
-              <img src={logo} alt="Former Fed" className="h-10" />
+              <img
+                src={logo}
+                alt="Former Fed"
+                className="h-10 w-auto"
+                width={160}
+                height={40}
+                fetchPriority="high"
+                decoding="async"
+              />
               <div className="hidden md:flex gap-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
