@@ -32,7 +32,7 @@ export function PasswordRequirements({ value, className }: Props) {
               <X
                 className={cn(
                   "h-3.5 w-3.5 shrink-0",
-                  touched ? "text-destructive" : "text-muted-foreground/60",
+                  touched ? "text-destructive" : "text-muted-foreground",
                 )}
                 aria-hidden="true"
               />
