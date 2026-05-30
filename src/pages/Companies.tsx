@@ -561,6 +561,7 @@ const Companies = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <h2 className="sr-only">Your target companies</h2>
           {companies.map((company) => (
             <Card 
               key={company.id} 
