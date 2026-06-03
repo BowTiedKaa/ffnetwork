@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SEO } from "@/components/SEO";
 
 type Status = "polling" | "success" | "timeout" | "no_session";
 
@@ -44,6 +45,12 @@ export default function CheckoutReturn() {
 
   return (
     <div className="max-w-md mx-auto pt-12">
+      <SEO
+        title="Activating Pro access — FF Network"
+        description="Confirming your FF Network Pro payment and unlocking your account. This page is for completed checkouts only."
+        path="/checkout/return"
+        noindex
+      />
       <Card className="p-8 text-center space-y-4">
         {status === "polling" && (
           <>

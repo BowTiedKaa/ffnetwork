@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { SEO } from "@/components/SEO";
 
 interface AdminUser {
   id: string;
@@ -189,6 +190,12 @@ const Admin = () => {
 
   return (
     <div className="space-y-6">
+      <SEO
+        title="Admin — FF Network"
+        description="Internal admin tools for FF Network: manage user approvals, roles, and Pro access codes."
+        path="/admin"
+        noindex
+      />
       <div>
         <h1 className="text-3xl font-bold">Admin</h1>
         <p className="text-muted-foreground">Manage users, roles, and access codes.</p>
