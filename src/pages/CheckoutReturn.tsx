@@ -45,6 +45,12 @@ export default function CheckoutReturn() {
 
   return (
     <div className="max-w-md mx-auto pt-12">
+      <SEO
+        title="Activating Pro access — FF Network"
+        description="Confirming your FF Network Pro payment and unlocking your account. This page is for completed checkouts only."
+        path="/checkout/return"
+        noindex
+      />
       <Card className="p-8 text-center space-y-4">
         {status === "polling" && (
           <>
