@@ -54,6 +54,15 @@ const PRICING_JSONLD = {
   ],
 };
 
+const PRICING_BREADCRUMBS_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://notify.theformerfed.com/" },
+    { "@type": "ListItem", position: 2, name: "Pricing", item: "https://notify.theformerfed.com/pricing" },
+  ],
+};
+
 const PLANS = [
   {
     priceId: "pro_monthly",
@@ -140,6 +149,7 @@ export default function Pricing() {
       />
       <Helmet>
         <script type="application/ld+json">{JSON.stringify(PRICING_JSONLD)}</script>
+        <script type="application/ld+json">{JSON.stringify(PRICING_BREADCRUMBS_JSONLD)}</script>
       </Helmet>
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">FF Network Pro</h1>
