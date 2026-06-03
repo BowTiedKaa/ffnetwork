@@ -70,6 +70,11 @@ const PitchBuilder = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <SEO
+        title="Pitch Builder — FF Network"
+        description="Build a sharp 4-sentence federal-to-tech pitch: quantified achievement, target role, transition reason, and revenue-focused value."
+        path="/pitch-builder"
+      />
       <div>
         <h1 className="text-3xl font-bold">Pitch Builder</h1>
         <p className="text-muted-foreground">Build the pitch you'll use in every conversation.</p>
