@@ -9,6 +9,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { SEO } from "@/components/SEO";
 
 const PitchBuilder = () => {
   const [userId, setUserId] = useState<string | null>(null);
