@@ -216,6 +216,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
                     onClick={openPortal}
                     disabled={portalLoading}
                     className="gap-2"
+                    aria-label="Manage subscription"
                   >
                     {portalLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -232,6 +233,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
                   size="sm"
                   onClick={() => setRedeemOpen(true)}
                   className="gap-2"
+                  aria-label="Redeem code"
                 >
                   <KeyRound className="h-4 w-4" />
                   <span className="hidden sm:inline">Redeem code</span>
@@ -242,6 +244,7 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
                 size="sm"
                 onClick={handleReplayOnboarding}
                 className="gap-2 text-muted-foreground hover:text-foreground"
+                aria-label="View onboarding"
               >
                 <HelpCircle className="h-4 w-4" />
                 <span className="hidden sm:inline">View onboarding</span>
