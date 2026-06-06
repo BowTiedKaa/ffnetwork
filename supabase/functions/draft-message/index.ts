@@ -30,6 +30,24 @@ serve(async (req) => {
       });
     }
 
+    // Enforce Pro tier server-side (client-side gate is not sufficient).
+    const sbAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data: profile } = await sbAdmin
+      .from("profiles")
+      .select("tier, tier_expires_at")
+      .eq("id", user.id)
+      .maybeSingle();
+    const isPro = profile?.tier === "pro" &&
+      (!profile.tier_expires_at || new Date(profile.tier_expires_at) > new Date());
+    if (!isPro) {
+      return new Response(JSON.stringify({ error: "Pro subscription required" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
