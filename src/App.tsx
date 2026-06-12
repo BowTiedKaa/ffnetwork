@@ -1,21 +1,22 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Contacts from "./pages/Contacts";
-import Companies from "./pages/Companies";
-import FollowUps from "./pages/FollowUps";
-import PitchBuilder from "./pages/PitchBuilder";
-import Admin from "./pages/Admin";
-import Pricing from "./pages/Pricing";
-import SeoScan from "./pages/SeoScan";
-import CheckoutReturn from "./pages/CheckoutReturn";
-import NotFound from "./pages/NotFound";
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Companies = lazy(() => import("./pages/Companies"));
+const FollowUps = lazy(() => import("./pages/FollowUps"));
+const PitchBuilder = lazy(() => import("./pages/PitchBuilder"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const SeoScan = lazy(() => import("./pages/SeoScan"));
+const CheckoutReturn = lazy(() => import("./pages/CheckoutReturn"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<Auth />} />
@@ -103,6 +105,7 @@ const App = () => (
           />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
