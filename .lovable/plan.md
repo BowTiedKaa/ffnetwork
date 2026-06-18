@@ -1,87 +1,68 @@
+# Former Fed Math — standalone tool
 
-# Promotion plan for FF Network
+**Tagline:** How much can you earn on the outside?
 
-## Where you are today (from your data)
+A free, no-login calculator that takes a fed's GS grade + background and shows realistic private-sector tech salary ranges and matching roles. Lives in its own Lovable project so it can grow independently of FF Network.
 
-- **Traffic (last 30 days):** ~37 unique visitors, 214 pageviews. Spikes only on days you (or Substack) posted.
-- **Sources:** Direct (34), formerfed.substack.com (1), Gmail (1). **Zero organic search traffic.**
-- **Top page:** `/auth` (34 hits) — visitors are landing on a login wall, not a pitch.
-- **SEO authority:** 2/100 (Semrush). 95 referring domains, but most are spammy auto-directories. Only one real referrer: **substack.com**.
-- **No organic keywords ranking** — Google doesn't really know what your site is about yet.
+## Why standalone
+- Own brand and domain (e.g. `formerfedmath.com`) — feels like a product, not a feature
+- Can go viral on Reddit/LinkedIn without coupling to FF Network's roadmap
+- Two equal CTAs at the bottom of every result: **Join FF Network (free)** and **Get the Gumroad guide**
 
-**Translation:** You don't have a promotion problem yet — you have a *front door* problem. Almost every visitor hits a login screen, and search engines have nothing to index.
+## v1 scope (instant result, no DB)
 
-## Strategy (fits "under $500/mo, organic-first")
+Single-page flow, no backend required:
 
-Three plays in priority order. Do #1 before spending a dollar on anything else.
+1. **Landing / hero** — headline, one-line pitch, "Calculate my number" button
+2. **4-question form**
+   - Current GS grade + step
+   - Agency type (Defense / Civilian / IC / Independent)
+   - Years of federal service
+   - Skill cluster (multi-select: acquisition, policy, data, cyber, PM, engineering, comms, legal)
+3. **Result screen (same page, scroll-to)**
+   - Big number: estimated private-sector total comp range (base + bonus + equity)
+   - "How we got there" breakdown (locality, GS-to-market multiplier, skill premium)
+   - Top 3 matching tech roles with company examples and salary bands
+   - Revenue vs. cost-center note (Sales/BD roles flagged as highest-leverage, per FF Network methodology)
+   - **Two equal CTAs side by side:** FF Network signup + Gumroad link
+4. **Footer** — "Built by The Former Fed" with link back to FF Network
 
-### 1. Build a public marketing landing page (highest ROI, free)
+No accounts, no database, no shareable URLs in v1. Everything runs client-side from a static dataset.
 
-Right now `/` redirects to `/auth`. That's why direct traffic doesn't convert and search engines see nothing.
+## Files to create
 
-Add a real public homepage at `/` that:
-- Explains the Former Fed methodology (federal → revenue tech roles)
-- Shows the Warm/Cooling/Cold contact system and Pitch Builder
-- Has a clear "Start free — 5 contacts" CTA and a "See pricing" link
-- Includes testimonials/social proof from your Substack audience
-- Keeps `/auth` for sign-in only
+- `src/lib/salaryMath.ts` — pure calculator: GS+step+locality → base market comp, plus skill multipliers and role matching against a static role dataset (~25 roles with GS equivalency, salary bands, hiring company examples)
+- `src/pages/Index.tsx` — hero + form + inline result (replaces default landing)
+- `src/components/CalculatorForm.tsx` — the 4-question form
+- `src/components/ResultCard.tsx` — number, breakdown, role matches, dual CTA
+- `src/components/Cta.tsx` — reusable split CTA (FF Network | Gumroad) with UTM params
 
-This single change unlocks SEO indexing, social sharing previews, and ad landing pages.
+## Branding
+- Name: **Former Fed Math**
+- Voice: blunt, numbers-first, no jargon ("Your GS-14 is worth $X on the outside")
+- Visual: clean, calculator-feel, distinct from FF Network's palette so they look like sibling products not the same site
 
-### 2. SEO content engine on your Substack + a `/blog` (free, compounding)
+I'll ask for color/font direction once you approve this plan.
 
-Your Substack already drives your only non-direct referral. Lean into it.
+## Distribution (after launch)
+- Reddit r/fednews post: "I built a calculator for what your GS is worth in tech"
+- LinkedIn carousel with sample results
+- Link from FF Network landing as a free tool
+- Gumroad product description links here as a "try the free calculator first"
 
-- Publish 2 posts/month targeting search terms federal employees actually type:
-  - "how to leave federal government for tech"
-  - "federal to tech sales transition"
-  - "best tech jobs for former government employees"
-  - "schedule F layoff what to do"
-- Cross-post to a `/blog` on `notify.theformerfed.com` so *your* domain earns the authority (right now Substack does).
-- Each post links to FF Network with a clear CTA.
+## Out of scope for v1 (revisit later)
+- Saved/shareable result URLs (would need DB + per-result OG images)
+- AI-generated personalized advice
+- Email capture / lead magnet
+- Auth
 
-I can run Semrush keyword research to pick the exact terms with real volume and low difficulty before you write.
+## Technical notes
+- New Lovable project, React + Vite + Tailwind + shadcn (same stack as FF Network)
+- No Lovable Cloud needed in v1 — fully static
+- SEO: unique title/description, JSON-LD `WebApplication`, canonical, sitemap.xml with `/`
+- UTMs on both CTAs: `?utm_source=formerfedmath&utm_medium=tool&utm_campaign=result`
 
-### 3. Distribution: communities + warm channels (free, this week)
-
-Your audience is concentrated and reachable:
-- **r/fednews, r/govfire, r/SecurityClearance** — share helpful posts, not links
-- **LinkedIn:** post 2x/week from your personal profile about the methodology; pin FF Network in your bio
-- **Federal-transition Slack/Discord groups** (e.g., Tech Ladies for Gov, Elevate, Partnership for Public Service alumni)
-- **Substack cross-promotions** with 2–3 adjacent newsletters (career, gov, layoff recovery)
-
-### 4. Optional paid (only if budget allows after #1 ships)
-
-- **$200/mo LinkedIn Ads** targeting job titles like "Foreign Service Officer", "GS-13/14/15", "Schedule C" → drive to the new landing page
-- **$100/mo Reddit promoted posts** in r/fednews
-
-Skip Google Ads until you have a landing page and SEO basics in place.
-
-## What I'd build in the app (if you want)
-
-If you approve, the actionable code work is:
-
-1. **New public `Landing.tsx` page** at `/`, with `/auth` reachable via a "Sign in" button. Redirect signed-in users to `/dashboard`.
-2. **`/blog` index + post route** (MDX or pulling from Substack RSS) so posts live on your domain.
-3. **SEO polish on the landing page:** unique title, meta description, OG image, FAQ JSON-LD, H1 with your primary keyword.
-4. **Tracking:** add UTM-friendly CTAs so you can tell which channel converts.
-
-## What I'd do outside the app (you, not me)
-
-- Pick 5 keywords (I can run Semrush to suggest them)
-- Write/repurpose 4 Substack posts → cross-post to `/blog`
-- Make 8 LinkedIn posts in 30 days
-- Post helpfully in 3 subreddits/week (no link-dropping)
-
-## 90-day targets (realistic for your starting point)
-
-| Metric | Today | Day 30 | Day 90 |
-|---|---|---|---|
-| Monthly visitors | ~37 | 200 | 800 |
-| Organic search visits | 0 | 20 | 150 |
-| Sign-ups (free tier) | — | 15 | 60 |
-| Pro conversions | — | 1–2 | 5–8 |
-
-## Recommended first step
-
-Approve this plan and I'll start with **#1: the public landing page**, since it unblocks everything else. After that we can sequence the blog and keyword research.
+## What I need from you before building
+1. Create the new Lovable project (I can't spawn one from here — use "New project" in your workspace, then open this plan there or paste it in)
+2. Your Gumroad product URL for the CTA
+3. Confirm the role dataset can be hand-curated (~25 roles) vs. pulled from a source
