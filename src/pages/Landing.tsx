@@ -76,7 +76,15 @@ const Landing = () => {
       <header className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="Former Fed" className="h-9 w-auto" width={144} height={36} />
+            <img
+              src={logo}
+              alt="Former Fed"
+              className="h-9 w-auto"
+              width={144}
+              height={36}
+              fetchPriority="high"
+              decoding="async"
+            />
           </Link>
           <nav className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => navigate("/pricing")}>Pricing</Button>
@@ -89,7 +97,7 @@ const Landing = () => {
       {/* Hero */}
       <section className="container mx-auto px-4 py-20 md:py-28">
         <div className="max-w-3xl mx-auto text-center space-y-6">
-          <p className="inline-block text-xs font-medium uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
+          <p className="inline-block text-xs font-semibold uppercase tracking-wider text-primary-foreground bg-primary px-3 py-1 rounded-full">
             For former federal employees
           </p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
