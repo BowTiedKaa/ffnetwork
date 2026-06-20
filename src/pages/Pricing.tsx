@@ -209,8 +209,11 @@ export default function Pricing() {
               <Button
                 className="w-full"
                 variant={p.highlight ? "default" : "outline"}
-                onClick={() => setSelected(p.priceId)}
-                disabled={!user}
+                onClick={() =>
+                  user
+                    ? setSelected(p.priceId)
+                    : navigate("/auth?redirect=/pricing")
+                }
               >
                 {user ? `Subscribe — ${p.price}${p.cadence}` : "Sign in to subscribe"}
               </Button>

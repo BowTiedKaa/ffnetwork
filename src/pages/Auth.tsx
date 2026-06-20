@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,12 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [sendingReset, setSendingReset] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
+  const safeRedirect =
+    redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
+      ? redirectParam
+      : "/dashboard";
   const { toast } = useToast();
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -63,13 +69,13 @@ const Auth = () => {
           title: "Welcome back!",
           description: "Successfully logged in.",
         });
-        navigate("/dashboard");
+        navigate(safeRedirect);
       } else {
         const { error } = await supabase.auth.signUp({
           email: validation.email,
           password: validation.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}${safeRedirect}`,
             data: {
               full_name: validation.fullName,
             },
@@ -102,7 +108,7 @@ const Auth = () => {
           title: "Account created!",
           description: "Welcome to your networking tracker.",
         });
-        navigate("/dashboard");
+        navigate(safeRedirect);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
