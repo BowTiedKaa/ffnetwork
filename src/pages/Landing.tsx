@@ -158,7 +158,7 @@ const Landing = () => {
             { icon: Users, title: "Contacts with warmth signals", body: "Warm (0–14d), Cooling (15–30d), Cold (30+d). Know exactly who to message next." },
             { icon: Building2, title: "Companies & paths", body: "Track every company you're targeting and the people inside them." },
             { icon: Calendar, title: "Follow-up reminders", body: "Never lose momentum. We tell you who to reach out to today." },
-            { icon: Sparkles, title: "AI-guided outreach (Pro)", body: "Personalized messages and pitch decks generated from your background and the role." },
+            { icon: Sparkles, title: "AI-guided outreach (Pro)", body: "Personalized messages and pitches generated from your background and the role." },
           ].map(({ icon: Icon, title, body }) => (
             <Card key={title} className="p-6 space-y-2">
               <div className="flex items-center gap-3">
