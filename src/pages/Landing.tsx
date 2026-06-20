@@ -99,7 +99,7 @@ const Landing = () => {
             For Aspiring Former Feds
           </p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-            Land a tech job after federal service.
+            Land a tech job after federal service
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
             FF Network is the career transition tracker built around the Former Fed methodology —
