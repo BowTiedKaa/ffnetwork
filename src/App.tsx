@@ -91,7 +91,7 @@ const App = () => (
           <Route
             path="/pricing"
             element={
-              <Layout>
+              <Layout allowAnonymous>
                 <Pricing />
               </Layout>
             }
