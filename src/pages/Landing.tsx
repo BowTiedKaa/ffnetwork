@@ -151,7 +151,7 @@ const Landing = () => {
       <section className="container mx-auto px-4 py-20 max-w-5xl">
         <div className="text-center mb-12 space-y-3">
           <h2 className="text-3xl md:text-4xl font-bold">Everything you need to run the play</h2>
-          <p className="text-muted-foreground">From first warm intro to signed offer.</p>
+          <p className="text-muted-foreground">From first warm intro to signed offer</p>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           {[
