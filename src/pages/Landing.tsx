@@ -96,7 +96,7 @@ const Landing = () => {
       <section className="container mx-auto px-4 py-20 md:py-28">
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <p className="inline-block text-xs font-semibold uppercase tracking-wider text-primary-foreground bg-primary px-3 py-1 rounded-full">
-            For former federal employees
+            For Aspiring Former Feds
           </p>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
             Land a tech job after federal service.
