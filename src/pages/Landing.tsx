@@ -111,9 +111,6 @@ const Landing = () => {
             <Button size="lg" onClick={() => navigate("/auth")} className="gap-2">
               Start free — 5 contacts
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/pricing")}>
-              See pricing
-            </Button>
           </div>
           <p className="text-xs text-muted-foreground pt-1">
             No credit card required. Upgrade when you're ready.
