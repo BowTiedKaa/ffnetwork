@@ -19,9 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 interface LayoutProps {
   children: ReactNode;
   requireAdmin?: boolean;
+  allowAnonymous?: boolean;
 }
 
-const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
+const Layout = ({ children, requireAdmin = false, allowAnonymous = false }: LayoutProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [showOnboardingReplay, setShowOnboardingReplay] = useState(false);
@@ -76,8 +77,8 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (!session && location.pathname !== "/auth") {
+
+        if (!session && !allowAnonymous && location.pathname !== "/auth") {
           navigate("/auth");
         }
       }
@@ -86,14 +87,14 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
-      if (!session && location.pathname !== "/auth") {
+
+      if (!session && !allowAnonymous && location.pathname !== "/auth") {
         navigate("/auth");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, location]);
+  }, [navigate, location, allowAnonymous]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -123,7 +124,53 @@ const Layout = ({ children, requireAdmin = false }: LayoutProps) => {
   ];
 
   if (!user) {
-    return <>{children}</>;
+    if (!allowAnonymous) return <>{children}</>;
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <nav className="border-b bg-card">
+          <div className="container mx-auto px-4">
+            <div className="flex h-16 items-center justify-between">
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="flex items-center"
+                aria-label="Former Fed home"
+              >
+                <img
+                  src={logo}
+                  alt="Former Fed"
+                  className="h-10 w-auto"
+                  width={160}
+                  height={40}
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => navigate("/")}>Home</Button>
+                <Button
+                  onClick={() =>
+                    navigate(`/auth?redirect=${encodeURIComponent(location.pathname + location.search)}`)
+                  }
+                >
+                  Sign in
+                </Button>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <main className="container mx-auto px-4 py-8 flex-1">{children}</main>
+        <footer className="border-t mt-8">
+          <div className="container mx-auto px-4 py-6 text-sm text-muted-foreground flex flex-wrap justify-between gap-2">
+            <span>© {new Date().getFullYear()} Former Fed</span>
+            <div className="flex gap-4">
+              <button onClick={() => navigate("/")} className="hover:text-foreground">Home</button>
+              <button onClick={() => navigate("/auth")} className="hover:text-foreground">Sign in</button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
   }
 
   if (accessLoading) {
