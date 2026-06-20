@@ -87,8 +87,6 @@ const Landing = () => {
             />
           </Link>
           <nav className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate("/pricing")}>Pricing</Button>
-            <Button variant="ghost" onClick={() => navigate("/auth")}>Sign in</Button>
             <Button onClick={() => navigate("/auth")}>Get started — free</Button>
           </nav>
         </div>
