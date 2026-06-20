@@ -221,7 +221,7 @@ const Landing = () => {
 
       {/* Final CTA */}
       <section className="container mx-auto px-4 py-20 text-center max-w-2xl space-y-6">
-        <h2 className="text-3xl md:text-4xl font-bold">Your next role is one warm intro away.</h2>
+        <h2 className="text-3xl md:text-4xl font-bold">Your next role is one warm intro away</h2>
         <p className="text-muted-foreground">Join other former feds succeeding with a networking-first strategy.</p>
         <Button size="lg" onClick={() => navigate("/auth")}>Get started — free</Button>
       </section>
