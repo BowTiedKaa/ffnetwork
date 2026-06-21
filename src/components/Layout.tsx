@@ -78,6 +78,12 @@ const Layout = ({ children, requireAdmin = false, allowAnonymous = false }: Layo
         setSession(session);
         setUser(session?.user ?? null);
 
+        if (session?.user?.id) {
+          import("@/lib/tracking/visitor")
+            .then((m) => m.attachUser(session.user!.id))
+            .catch(() => {});
+        }
+
         if (!session && !allowAnonymous && location.pathname !== "/auth") {
           navigate("/auth");
         }
@@ -87,6 +93,12 @@ const Layout = ({ children, requireAdmin = false, allowAnonymous = false }: Layo
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+        if (session?.user?.id) {
+          import("@/lib/tracking/visitor")
+            .then((m) => m.attachUser(session.user!.id))
+            .catch(() => {});
+        }
 
       if (!session && !allowAnonymous && location.pathname !== "/auth") {
         navigate("/auth");
