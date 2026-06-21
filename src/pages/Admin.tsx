@@ -198,7 +198,12 @@ const Admin = () => {
       />
       <div>
         <h1 className="text-3xl font-bold">Admin</h1>
-        <p className="text-muted-foreground">Manage users, roles, and access codes.</p>
+        <p className="text-muted-foreground">
+          Manage users, roles, and access codes.{" "}
+          <a href="/admin/archetypes" className="underline text-primary">
+            View visitor archetypes →
+          </a>
+        </p>
       </div>
 
       <Tabs defaultValue="users">

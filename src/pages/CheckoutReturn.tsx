@@ -31,6 +31,7 @@ export default function CheckoutReturn() {
           .maybeSingle();
         if (profile?.tier === "pro") {
           setStatus("success");
+          try { (await import("@/lib/tracking/visitor")).track("checkout_completed", { sessionId }); } catch {}
           clearInterval(interval);
           return;
         }

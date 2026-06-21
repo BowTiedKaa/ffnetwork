@@ -587,6 +587,110 @@ export type Database = {
         }
         Relationships: []
       }
+      visitor_events: {
+        Row: {
+          event_name: string
+          id: number
+          metadata: Json
+          occurred_at: string
+          path: string | null
+          referrer: string | null
+          visitor_id: string
+        }
+        Insert: {
+          event_name: string
+          id?: number
+          metadata?: Json
+          occurred_at?: string
+          path?: string | null
+          referrer?: string | null
+          visitor_id: string
+        }
+        Update: {
+          event_name?: string
+          id?: number
+          metadata?: Json
+          occurred_at?: string
+          path?: string | null
+          referrer?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitor_events_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visitors: {
+        Row: {
+          archetype: string
+          archetype_updated_at: string
+          created_at: string
+          event_count: number
+          first_landing_path: string | null
+          first_referrer: string | null
+          first_seen_at: string
+          first_utm_campaign: string | null
+          first_utm_content: string | null
+          first_utm_medium: string | null
+          first_utm_source: string | null
+          first_utm_term: string | null
+          id: string
+          last_path: string | null
+          last_seen_at: string
+          session_count: number
+          updated_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          archetype?: string
+          archetype_updated_at?: string
+          created_at?: string
+          event_count?: number
+          first_landing_path?: string | null
+          first_referrer?: string | null
+          first_seen_at?: string
+          first_utm_campaign?: string | null
+          first_utm_content?: string | null
+          first_utm_medium?: string | null
+          first_utm_source?: string | null
+          first_utm_term?: string | null
+          id: string
+          last_path?: string | null
+          last_seen_at?: string
+          session_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          archetype?: string
+          archetype_updated_at?: string
+          created_at?: string
+          event_count?: number
+          first_landing_path?: string | null
+          first_referrer?: string | null
+          first_seen_at?: string
+          first_utm_campaign?: string | null
+          first_utm_content?: string | null
+          first_utm_medium?: string | null
+          first_utm_source?: string | null
+          first_utm_term?: string | null
+          id?: string
+          last_path?: string | null
+          last_seen_at?: string
+          session_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -595,6 +699,10 @@ export type Database = {
       apply_pro_entitlement: {
         Args: { _sub_expires_at: string; _user_id: string }
         Returns: undefined
+      }
+      compute_visitor_archetype: {
+        Args: { _visitor_id: string }
+        Returns: string
       }
       delete_email: {
         Args: { message_id: number; queue_name: string }

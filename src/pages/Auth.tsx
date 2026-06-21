@@ -69,8 +69,10 @@ const Auth = () => {
           title: "Welcome back!",
           description: "Successfully logged in.",
         });
+        try { (await import("@/lib/tracking/visitor")).track("login_completed"); } catch {}
         navigate(safeRedirect);
       } else {
+        try { (await import("@/lib/tracking/visitor")).track("signup_started"); } catch {}
         const { error } = await supabase.auth.signUp({
           email: validation.email,
           password: validation.password,
@@ -108,6 +110,7 @@ const Auth = () => {
           title: "Account created!",
           description: "Welcome to your networking tracker.",
         });
+        try { (await import("@/lib/tracking/visitor")).track("signup_completed"); } catch {}
         navigate(safeRedirect);
       }
     } catch (error) {

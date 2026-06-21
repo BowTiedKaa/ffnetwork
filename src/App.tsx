@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
+import RouteTracker from "./components/RouteTracker";
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -14,6 +15,7 @@ const Companies = lazy(() => import("./pages/Companies"));
 const FollowUps = lazy(() => import("./pages/FollowUps"));
 const PitchBuilder = lazy(() => import("./pages/PitchBuilder"));
 const Admin = lazy(() => import("./pages/Admin"));
+const AdminArchetypes = lazy(() => import("./pages/AdminArchetypes"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const SeoScan = lazy(() => import("./pages/SeoScan"));
 const CheckoutReturn = lazy(() => import("./pages/CheckoutReturn"));
@@ -27,6 +29,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <RouteTracker />
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>}>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -77,6 +80,14 @@ const App = () => (
             element={
               <Layout requireAdmin>
                 <Admin />
+              </Layout>
+            }
+          />
+          <Route
+            path="/admin/archetypes"
+            element={
+              <Layout requireAdmin>
+                <AdminArchetypes />
               </Layout>
             }
           />
