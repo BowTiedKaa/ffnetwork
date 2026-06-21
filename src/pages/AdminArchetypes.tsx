@@ -132,7 +132,7 @@ export default function AdminArchetypes() {
 
   return (
     <div className="space-y-6">
-      <SEO title="Archetypes - Admin" description="Live visitor archetype breakdown." noindex />
+      <SEO title="Archetypes - Admin" description="Live visitor archetype breakdown." path="/admin/archetypes" noindex />
       <div>
         <h1 className="text-2xl font-bold">Visitor archetypes</h1>
         <p className="text-muted-foreground text-sm">
