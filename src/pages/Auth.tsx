@@ -110,6 +110,7 @@ const Auth = () => {
           title: "Account created!",
           description: "Welcome to your networking tracker.",
         });
+        try { (await import("@/lib/tracking/visitor")).track("signup_completed"); } catch {}
         navigate(safeRedirect);
       }
     } catch (error) {
