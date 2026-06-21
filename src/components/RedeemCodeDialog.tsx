@@ -48,6 +48,7 @@ export const RedeemCodeDialog = ({ open, onOpenChange, onRedeemed }: Props) => {
     }
     setSuccess(result.expires_at || "");
     onRedeemed?.();
+    try { (await import("@/lib/tracking/visitor")).track("code_redeemed"); } catch {}
     // Notify admin (best-effort)
     try {
       const { data: userData } = await supabase.auth.getUser();
