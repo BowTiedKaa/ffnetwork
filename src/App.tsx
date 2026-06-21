@@ -84,6 +84,14 @@ const App = () => (
             }
           />
           <Route
+            path="/admin/archetypes"
+            element={
+              <Layout requireAdmin>
+                <AdminArchetypes />
+              </Layout>
+            }
+          />
+          <Route
             path="/seo-scan"
             element={
               <Layout requireAdmin>
