@@ -102,6 +102,10 @@ export default function Pricing() {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
 
+  useEffect(() => {
+    import("@/lib/tracking/visitor").then((m) => m.track("pricing_view")).catch(() => {});
+  }, []);
+
   // Detect whether the user has a Stripe subscription row (vs. code-only Pro)
   useEffect(() => {
     if (!user?.id) return;
@@ -139,6 +143,12 @@ export default function Pricing() {
   };
 
   const returnUrl = `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`;
+
+  useEffect(() => {
+    if (selected) {
+      import("@/lib/tracking/visitor").then((m) => m.track("checkout_started", { priceId: selected })).catch(() => {});
+    }
+  }, [selected]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
